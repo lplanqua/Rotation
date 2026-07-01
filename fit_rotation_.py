@@ -42,7 +42,8 @@ def log_prior(params):
 # Vraisemblance (log-likelihood)
 def log_likelihood(params, pix_arr, data):
     axis_radian, vsini, vsys, vexp = params
-    sigma = err*np.ones(np.shape(pix_arr))
+    # sigma = err_scalar*np.ones(np.shape(pix_arr))
+    sigma = err
     model = velocity(pix_arr,params)
     return -0.5 * np.sum(((data - model) / sigma) ** 2 + np.log(2 * np.pi * sigma ** 2))
 
@@ -173,7 +174,8 @@ def velocity(pix_arr,params):
 
 #reading an actual file
 input_dir = 'DATA/Betelgeuse/'
-inputfile = glob.glob(input_dir + '*vel*.fits')[2]
+inputfile = glob.glob(input_dir + '*center.vel*.fits')[2]
+inputfile_err = glob.glob(input_dir + '*center.err*.fits')[2]
 betel_data, core_params = read_fits(inputfile)
 nbpix, pix_size, lim, Rstar = core_params
 
@@ -195,7 +197,10 @@ params = [axis_radian, vsini, vsys, vexp]
 
 #intial value
 x0 = [0*np.pi/180, 0, 0.0, 0]
-err = 0.11
+err_scalar = 0.11
+err,_ = read_fits(inputfile_err)
+err = np.ravel(err)
+print(err)
 
 plot_surface(np.reshape(betel_data, (nbpix, nbpix)), params, cmap = 'bwr',boolShow= True, boolSave = False)
 
@@ -260,7 +265,7 @@ print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 res_vel_map_1d = velocity(pix_arr,res_lsq.x)
 plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x,  cmap = 'bwr',boolShow= False, boolSave = True, filename = str(Rshell)+'least_squares_fit.png')
 #
-chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err**2)
+chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err_scalar**2)
 print('chi2 = ', chi2)
 
 
@@ -273,7 +278,7 @@ pos = initial_guess + 1e-4 * np.random.randn(nwalkers, ndim)
 
 sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, data_1d))
 print("Running MCMC...")
-sampler.run_mcmc(pos, 450000, progress=True)
+sampler.run_mcmc(pos, 45000, progress=True)
 #Results
 burn_in = 2000
 samples = sampler.get_chain(discard=burn_in, flat=True)
