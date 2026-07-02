@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import numpy as np
 from scipy.optimize import least_squares
 from astropy.io import fits
@@ -73,7 +74,7 @@ def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True,
     # vel_map= np.array(vel_map, dtype=float)
     Cmap = plt.get_cmap(cmap)
     Cmap.set_bad(color='gray', alpha=0.25)
-    h = plt.imshow(vel_map, extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = Cmap)
+    h = plt.imshow(vel_map, extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = 0))
 
     plt.axis('scaled')
     ax = plt.gca()
@@ -83,7 +84,9 @@ def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True,
         ax.annotate("", xytext=(1.2*Rstar*np.sin(axis_radian), -1.2*Rstar*np.cos(axis_radian)), xy=(-1.2*Rstar*np.sin(axis_radian), 1.2*Rstar*np.cos(axis_radian)),
                     arrowprops=dict(arrowstyle="->",facecolor='black', lw = 2))
     ax.minorticks_on()
-    cbar = plt.colorbar(label = 'RV [km/s]')
+    cbar = plt.colorbar(label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
+    # cbar.add_lines([vsys])
+    cbar.ax.axhline(y=vsys, c='lime', lw = 5)
     # cbar.axvline(y=vsys)
     plt.xlabel(r'$\Delta \alpha$ [mas] (<--E)')
     plt.ylabel(r'$\Delta \delta$ [mas] (N-->)')
@@ -199,10 +202,10 @@ params = [axis_radian, vsini, vsys, vexp]
 x0 = [0*np.pi/180, 0, 0.0, 0]
 err_scalar = 0.11
 err,_ = read_fits(inputfile_err)
-err = np.ravel(err)
-print(err)
+err = np.ravel(err) + 1E-9
 
-plot_surface(np.reshape(betel_data, (nbpix, nbpix)), params, cmap = 'bwr',boolShow= True, boolSave = False)
+
+# plot_surface(np.reshape(betel_data, (nbpix, nbpix)), x0, cmap = 'seismic',boolShow= True)
 
 #to replace by betelgeuse data
 vel_map_1d = betel_data #velocity(pix_arr,params)
@@ -246,7 +249,8 @@ with fits.open(filename) as hdul:
 #need to extract the parameters for the image
 
 # print(data)
-# plot_surface(data, params, cmap = 'bwr',boolShow= True, boolSave = False)
+plot_surface(data, x0, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
+plot_surface(np.reshape(err, (nbpix, nbpix)), x0, cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_err.png')
 
 data_1d =  np.ravel(data)
 # print(np.shape(data_1d))
@@ -263,9 +267,9 @@ print('least squared reulst = ', res_lsq.x)
 print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 
 res_vel_map_1d = velocity(pix_arr,res_lsq.x)
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x,  cmap = 'bwr',boolShow= False, boolSave = True, filename = str(Rshell)+'least_squares_fit.png')
+plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x,  cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
 #
-chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err_scalar**2)
+chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err**2)
 print('chi2 = ', chi2)
 
 
@@ -274,13 +278,69 @@ print('chi2 = ', chi2)
 ndim = len(params)
 nwalkers = 50
 initial_guess = x0
-pos = initial_guess + 1e-4 * np.random.randn(nwalkers, ndim)
+pos = np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
+
+chainname= "chains.h5"
+backend = emcee.backends.HDFBackend(chainname)
+backend.reset(nwalkers, ndim)
+
 
 sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, data_1d))
+
+# max_n = 100000
+#
+# # We'll track how the average autocorrelation time estimate changes
+# index = 0
+# autocorr = np.empty(max_n)
+#
+# # This will be useful to testing convergence
+# old_tau = np.inf
+#
+# # Now we'll sample for up to max_n steps
+# for sample in sampler.sample(pos, iterations=max_n, progress=True):
+#     # Only check convergence every 100 steps
+#     if sampler.iteration % 100:
+#         continue
+#
+#     # Compute the autocorrelation time so far
+#     # Using tol=0 means that we'll always get an estimate even
+#     # if it isn't trustworthy
+#     tau = sampler.get_autocorr_time(tol=0)
+#     autocorr[index] = np.mean(tau)
+#     index += 1
+#
+#     # Check convergence
+#     converged = np.all(tau * 100 < sampler.iteration)
+#     converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
+#     if converged:
+#         break
+#     old_tau = tau
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+nstep = 1000000
 print("Running MCMC...")
-sampler.run_mcmc(pos, 45000, progress=True)
+sampler.run_mcmc(pos, nstep, progress=True)
 #Results
-burn_in = 2000
+burn_in = int(nstep*0.1)
 samples = sampler.get_chain(discard=burn_in, flat=True)
 
 
@@ -292,7 +352,7 @@ MCMC_vel_map_1d = velocity(pix_arr,params_MCMC)
 chi2 = np.sum(((data_1d - MCMC_vel_map_1d)**2)/err**2)
 print('chi2 from MCMC = ', chi2)
 
-plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC,  cmap = 'bwr',boolShow= True, boolSave = True, filename = str(Rshell)+'MCMC_fit.png')
+plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC,  cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_result_mcmc.png')
 
 
 samples[:,0] = samples[:,0]*180/np.pi
@@ -306,6 +366,6 @@ fig = corner.corner(
 )
 
 
-plt.savefig('Corner.png', bbox_inches = 'tight')
+plt.savefig(output_dir + inputfile[len(input_dir):-5]+'_corner.png', bbox_inches = 'tight')
 plt.show()
 
