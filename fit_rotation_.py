@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.collections import PatchCollection
 import matplotlib.colors as colors
 import numpy as np
 from scipy.optimize import least_squares
@@ -8,15 +10,40 @@ import emcee, corner
 
 plt.rcParams['font.size'] = 16
 
+starname = 'R_Leo' #or R_Dor or Betelgeuse
+date = '2025-09-27'
+
 
 #HARDCODE VARIABLES
 
-nbpix = 15 #lim*2 - 1#50 # nbpix
-lim = 22.5 # size of the image in mas
-pix_size =2*(lim)/nbpix
-print(pix_size)
-Rstar = 21#22.6
-Rshell = 25
+if starname == 'Betelgeuse':
+    nbpix = 15 #lim*2 - 1#50 # nbpix
+    lim = 22.5 # size of the image in mas
+    pix_size =2*(lim)/nbpix
+    print(pix_size)
+    Rstar = 21#22.6
+    Rshell = 40
+    vsys0 = 0
+
+elif starname == 'R_Dor':
+    nbpix = 17 #lim*2 - 1#50 # nbpix
+    lim = 25.5 # size of the image in mas
+    pix_size =2*(lim)/nbpix
+    print(pix_size)
+    Rstar = 24#22.6
+    Rshell = 30
+    vsys0 = 9.5
+
+
+elif starname == 'R_Leo':
+    nbpix = 15 #lim*2 - 1#50 # nbpix
+    lim = 22.5 # size of the image in mas
+    pix_size =2*(lim)/nbpix
+    print(pix_size)
+    Rstar = 21#22.6
+    Rshell = 30
+    vsys0 = 10
+
 
 """
 Some useful functions
@@ -30,9 +57,9 @@ def log_prior(params):
     axis_radian, vsini, vsys, vexp = params
     if vsini <0:
         return -np.inf
-    if axis_radian< 0:
+    if axis_radian< -0.5*np.pi:
         return -np.inf
-    if axis_radian > 2*np.pi:
+    if axis_radian > 2.5*np.pi:
         return -np.inf
     # if vexp >100:       #slow wind
     #     return -np.inf
@@ -56,6 +83,32 @@ def log_posterior(params, pix_arr, data):
     return lp + log_likelihood(params, pix_arr, data)
 
 
+def draw_self_loop(center, radius, rota=-30):
+
+    # Add the ring
+    rwidth = 0.2
+    width = radius
+    height = radius/2
+
+    ring = mpatches.Arc(center, width, height, angle=rota, theta1 = 120, theta2 = 300, lw = 3)
+    # Triangle edges
+    offset = 0.2
+    rota_rad = -90 -rota*np.pi/180
+    xcent  = center[0] - np.cos(rota_rad)*height/2 # + (rwidth/2)
+    ycent  = center[1] + np.sin(rota_rad)*height/2 # + (rwidth/2)
+    left   = [xcent - offset*np.cos(rota_rad), ycent - offset*np.sin(rota_rad)]
+    right  = [xcent + offset*np.cos(rota_rad), ycent+ offset*np.sin(rota_rad)]
+    bottom = [-offset*np.sin(rota_rad) + (left[0]+right[0])/2., ycent+offset*np.cos(rota_rad)]
+    arrow  = plt.Polygon([left, right, bottom, left])
+    p = PatchCollection(
+        [ring, arrow],
+        edgecolor = 'k',
+        facecolor = 'None',
+        lw = 3
+    )
+    return p
+
+
 
 def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True, filename = None):
 
@@ -67,22 +120,26 @@ def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True,
 
     plt.figure(figsize = (12,12))
     # h = plt.contourf(X, Y, Rs)
-    if params[0] == 0:
+    if params[1] == 0:
         plt.title('INPUT')
     else:
         plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $R_{shell}$ = '+ str(np.round(Rshell,1))+' pix')
     # vel_map= np.array(vel_map, dtype=float)
     Cmap = plt.get_cmap(cmap)
     Cmap.set_bad(color='gray', alpha=0.25)
-    h = plt.imshow(vel_map, extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = 0))
+    vel_map[vel_map== 0] = np.nan
+    h = plt.imshow(vel_map, extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vsys))
 
     plt.axis('scaled')
     ax = plt.gca()
 
     ax.tick_params(direction="in", which = 'both', top = True, right = True)
     if vsini != 0:
-        ax.annotate("", xytext=(1.2*Rstar*np.sin(axis_radian), -1.2*Rstar*np.cos(axis_radian)), xy=(-1.2*Rstar*np.sin(axis_radian), 1.2*Rstar*np.cos(axis_radian)),
-                    arrowprops=dict(arrowstyle="->",facecolor='black', lw = 2))
+        print(1.2*Rstar*np.sin(axis_radian), -1.2*Rstar*np.cos(axis_radian), -1.2*Rstar*np.sin(axis_radian), 1.2*Rstar*np.cos(axis_radian))
+        ax.annotate("", xytext=(1.1*Rstar*np.sin(axis_radian), -1.1*Rstar*np.cos(axis_radian)), xy=(-1.1*Rstar*np.sin(axis_radian), 1.1*Rstar*np.cos(axis_radian)),
+                    arrowprops=dict(arrowstyle="->",facecolor='black', lw = 3))
+        p = draw_self_loop(center=(-1.05*Rstar*np.sin(axis_radian), 1.05*Rstar*np.cos(axis_radian)),radius=2, rota = axis_radian*180/np.pi)
+        ax.add_collection(p)
     ax.minorticks_on()
     cbar = plt.colorbar(label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
     # cbar.add_lines([vsys])
@@ -109,14 +166,14 @@ def write_to_fits(vel_map, params, filename = None):
     hdr['BUNIT'] = 'km/s'
     hdr['BTYPE'] = 'velocity'
 
-    hdr['CRVAL1'] = 0
-    hdr['CRVAL2'] = 0
+    hdr['CRVAL1'] = nbpix/4
+    hdr['CRVAL2'] = nbpix/4
 
     hdr['CRPIX1'] = nbpix/2
     hdr['CRPIX2'] = nbpix/2
 
-    hdr['CRDELT1'] = -pix_size #should be negative for RA axis positive toward left
-    hdr['CRDELT2'] = pix_size
+    hdr['CDELT1'] = pix_size #should be negative for RA axis positive toward left
+    hdr['CDELT2'] = pix_size
 
     # the units
     hdr['CUNIT1'] = 'mas'
@@ -143,7 +200,7 @@ def read_fits(filename):
     pix_size = 3
     #pix_size =2*(lim)/nbpix
     lim = nbpix*pix_size/2
-    Rstar = 21#22.6
+    # Rstar = 21#22.6
     core_params = nbpix, pix_size, lim, Rstar
 
     return data, core_params
@@ -165,7 +222,7 @@ def velocity(pix_arr,params):
 
     axis_perp = X*np.cos(axis_radian) + Y*np.sin(axis_radian) #x'
     axis_para =  -X*np.sin(axis_radian) + Y*np.cos(axis_radian)#y'
-    vrot = axis_perp*vsini/Rshell
+    vrot = axis_perp*np.abs(vsini)/Rshell
     vtot = vrot + vsys - vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
     # h = plt.imshow(np.reshape(R, (nbpix, nbpix)), extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = 'bwr')
@@ -176,9 +233,17 @@ def velocity(pix_arr,params):
 
 
 #reading an actual file
-input_dir = 'DATA/Betelgeuse/'
-inputfile = glob.glob(input_dir + '*center.vel*.fits')[2]
-inputfile_err = glob.glob(input_dir + '*center.err*.fits')[2]
+if starname == 'Betelgeuse':
+    transition = '28SiOv2'
+    input_dir = 'DATA/' + starname+ '/'
+elif starname == 'R_Dor' or starname == 'R_Leo':
+    transition = 'SiO_v=2_8-7'
+    input_dir = 'DATA/' + starname+ '/' + date + '/'
+
+
+
+inputfile = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')[0]
+inputfile_err = glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
 betel_data, core_params = read_fits(inputfile)
 nbpix, pix_size, lim, Rstar = core_params
 
@@ -199,10 +264,11 @@ vexp = 2#1.7 #km/s, positive value for outflows
 params = [axis_radian, vsini, vsys, vexp]
 
 #intial value
-x0 = [0*np.pi/180, 0, 0.0, 0]
+x0 = [90*np.pi/180, 0, vsys0, 0]
+
 err_scalar = 0.11
 err,_ = read_fits(inputfile_err)
-err = np.ravel(err) + 1E-9
+err = np.ravel(err) + 1E-11
 
 
 # plot_surface(np.reshape(betel_data, (nbpix, nbpix)), x0, cmap = 'seismic',boolShow= True)
@@ -223,7 +289,9 @@ plot the result
 export the result into a fits file
 """
 
-output_dir = 'RESULTS/Betelgeuse/'
+output_dir = 'RESULTS/' + starname+ '/'
+if starname == 'R_Dor':
+    output_dir += date
 
 filename = output_dir + inputfile[len(input_dir):-5]+'_input.fits'
 write_to_fits(vel_map, params, filename = filename)
@@ -233,12 +301,6 @@ write_to_fits(vel_map, params, filename = filename)
 """
 read fits file and extract data
 """
-# DIR = 'Figures/'
-
-# params = [45*np.pi/180, 5, 0.0, 2.0, 36.0]
-# axis_radian, vsini, vsys, vexp, Rshell = params
-
-
 # filename = glob.glob(DIR+'*.fits')[0]
 print('saved as : ', filename)
 
@@ -253,7 +315,10 @@ plot_surface(data, x0, cmap = 'seismic',boolShow= True, boolSave = True, filenam
 plot_surface(np.reshape(err, (nbpix, nbpix)), x0, cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_err.png')
 
 data_1d =  np.ravel(data)
-# print(np.shape(data_1d))
+print(np.shape(betel_data))
+
+#to work directly on th efile
+data_1d = np.ravel(vel_map_1d)
 
 # # x0 = np.ones(np.shape(data_1d))
 
@@ -267,10 +332,12 @@ print('least squared reulst = ', res_lsq.x)
 print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 
 res_vel_map_1d = velocity(pix_arr,res_lsq.x)
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x,  cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
+plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x,  cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
 #
 chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err**2)
 print('chi2 = ', chi2)
+chi2r = chi2/len(data_1d)
+print('chi2r = ', chi2r)
 
 
 
@@ -278,43 +345,73 @@ print('chi2 = ', chi2)
 ndim = len(params)
 nwalkers = 50
 initial_guess = x0
-pos = np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
+pos = initial_guess + 1e-4*np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
 
-chainname= "chains.h5"
+chainname= "Figures/chains/chains.h5"
 backend = emcee.backends.HDFBackend(chainname)
 backend.reset(nwalkers, ndim)
 
 
-sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, data_1d))
+sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, data_1d), backend=backend)
 
-# max_n = 100000
+max_n = 100000
 #
 # # We'll track how the average autocorrelation time estimate changes
-# index = 0
-# autocorr = np.empty(max_n)
+index = 0
+autocorr = np.empty(max_n)
 #
 # # This will be useful to testing convergence
-# old_tau = np.inf
+old_tau = np.inf
 #
 # # Now we'll sample for up to max_n steps
-# for sample in sampler.sample(pos, iterations=max_n, progress=True):
-#     # Only check convergence every 100 steps
-#     if sampler.iteration % 100:
-#         continue
+for sample in sampler.sample(pos, iterations=max_n, progress=True):
+      # Only check convergence every 100 steps
+    if sampler.iteration % 100:
+        continue
 #
 #     # Compute the autocorrelation time so far
 #     # Using tol=0 means that we'll always get an estimate even
 #     # if it isn't trustworthy
-#     tau = sampler.get_autocorr_time(tol=0)
-#     autocorr[index] = np.mean(tau)
-#     index += 1
+    tau = sampler.get_autocorr_time(tol=0)
+    autocorr[index] = np.mean(tau)
+    index += 1
 #
 #     # Check convergence
-#     converged = np.all(tau * 100 < sampler.iteration)
-#     converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
-#     if converged:
-#         break
-#     old_tau = tau
+    converged = np.all(tau * 100 < sampler.iteration) #100
+    converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
+    if converged:
+        print('converged')
+        break
+    old_tau = tau
+
+
+
+n = 100 * np.arange(1, index + 1)
+y = autocorr[:index]
+plt.plot(n, n / 100.0, "--k")
+plt.plot(n, y)
+plt.xlim(0, np.nanmax(n))
+plt.ylim(0, np.nanmax(y) + 0.1 * (np.nanmax(y) - np.nanmin(y)))
+plt.xlabel("number of steps")
+plt.ylabel(r"mean $\hat{\tau}$");
+plt.show()
+
+
+
+
+
+tau = sampler.get_autocorr_time()
+burnin = int(2 * np.max(tau))
+thin = int(0.5 * np.min(tau))
+samples = sampler.get_chain(discard=burnin, flat=True, thin=thin)
+log_prob_samples = sampler.get_log_prob(discard=burnin, flat=True, thin=thin)
+log_prior_samples = sampler.get_blobs(discard=burnin, flat=True, thin=thin)
+
+print("burn-in: {0}".format(burnin))
+print("thin: {0}".format(thin))
+print("flat chain shape: {0}".format(samples.shape))
+print("flat log prob shape: {0}".format(log_prob_samples.shape))
+# print("flat log prior shape: {0}".format(log_prior_samples.shape))
 
 
 
@@ -325,23 +422,12 @@ sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, da
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-nstep = 1000000
-print("Running MCMC...")
-sampler.run_mcmc(pos, nstep, progress=True)
+# nstep = 1000000
+# print("Running MCMC...")
+# sampler.run_mcmc(pos, nstep, progress=True)
 #Results
-burn_in = int(nstep*0.1)
-samples = sampler.get_chain(discard=burn_in, flat=True)
+# burn_in = int(nstep*0.1)
+samples = sampler.get_chain(discard=burnin, flat=True)
 
 
 params_MCMC = np.mean(samples, axis=0)
@@ -351,6 +437,8 @@ MCMC_vel_map_1d = velocity(pix_arr,params_MCMC)
 
 chi2 = np.sum(((data_1d - MCMC_vel_map_1d)**2)/err**2)
 print('chi2 from MCMC = ', chi2)
+chi2r = chi2/len(data_1d)
+print('chi2r = ', chi2r)
 
 plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC,  cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_result_mcmc.png')
 

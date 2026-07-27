@@ -24,7 +24,7 @@ def model(params, pix_arr, data): #x t y
     return data - model
 
 def log_prior(params):
-    axis_radian, vsini, vsys, vexp, Rshell = params
+    axis_radian, vsini, vsys, vexp, Rshell, alpha = params
     if vsini <0:
         return -np.inf
     if vsini >50:
@@ -41,11 +41,13 @@ def log_prior(params):
         return -np.inf
     if Rshell >37:
         return -np.inf
+    if alpha < 0:
+        return -np.inf
     return 0
 
 # Vraisemblance (log-likelihood)
 def log_likelihood(params, pix_arr, data):
-    axis_radian, vsini, vsys, vexp, Rshell = params
+    axis_radian, vsini, vsys, vexp, Rshell, alpha = params
     sigma = 0.1*np.ones(np.shape(pix_arr))
     model = velocity(pix_arr,params)
     return -0.5 * np.sum(((data - model) / sigma) ** 2 + np.log(2 * np.pi * sigma ** 2))
@@ -62,7 +64,7 @@ def log_posterior(params, pix_arr, data):
 def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True, filename = None):
 
 
-    axis_radian, vsini, vsys, vexp, Rshell = params
+    axis_radian, vsini, vsys, vexp, Rshell, alpha = params
     if filename == None:
         filename = 'Figures/' +'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
         filename += '.png'
@@ -70,6 +72,7 @@ def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True,
     plt.figure(figsize = (12,12))
     # h = plt.contourf(X, Y, Rs)
     plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $R_{shell}$ = '+ str(np.round(Rshell,1))+' pix')
+    vel_map[vel_map== 0] = np.nan
     h = plt.imshow(vel_map, extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = cmap)
 
     plt.axis('scaled')
@@ -95,7 +98,7 @@ def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True,
 
 
 def write_to_fits(vel_map, params, filename = None):
-    axis_radian, vsini, vsys, vexp, Rshell = params
+    axis_radian, vsini, vsys, vexp, Rshell, alpha = params
     if filename == None:
         filename = 'Figures/' + 'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
         filename += '.fits'
@@ -124,7 +127,7 @@ def write_to_fits(vel_map, params, filename = None):
 
 
 def velocity(pix_arr,params):
-    axis_radian, vsini, vsys, vexp, Rshell = params
+    axis_radian, vsini, vsys, vexp, Rshell, alpha = params
 
     Y, X = np.unravel_index(pix_arr, (nbpix,nbpix)) #X and Y swapped to speak in cartesian coordinates
     X = X*pix_size -lim
@@ -139,7 +142,8 @@ def velocity(pix_arr,params):
     axis_perp = X*np.cos(axis_radian) + Y*np.sin(axis_radian) #x'
     axis_para =  -X*np.sin(axis_radian) + Y*np.cos(axis_radian)#y'
     vrot = axis_perp*vsini/Rshell
-    vtot = vrot + vsys - vexp*(Rshell - R)/Rshell
+    vdiff = (np.abs(axis_para)*alpha/Rshell)*np.sign(vrot)
+    vtot = vrot + vsys - vexp*(Rshell - R)/Rshell #+ vdiff
     vtot[mask] = 0#np.nan
 
     return vtot.ravel()
@@ -156,11 +160,13 @@ The model parameters:
 axis = 45 #in degrees
 axis_radian = axis*np.pi/180
 
-vsini = 5 #km/s, should be positive
+vsini = 4 #km/s, should be positive
 vsys = 0#4.9 #km/s
-vexp = 2#1.7 #km/s, positive value for outflows
-Rshell = 36 # pixel
-params = [axis_radian, vsini, vsys, vexp, Rshell]
+vexp = 0 #km/s, positive value for outflows
+Rshell = 36
+# pixel
+alpha = -0.1
+params = [axis_radian, vsini, vsys, vexp, Rshell, alpha]
 
 
 vel_map_1d = velocity(pix_arr,params)
@@ -172,7 +178,7 @@ vel_map = np.reshape(vel_map_1d, (nbpix, nbpix))
 """
 plot the result
 """
-plot_surface(vel_map, params, boolShow= True, boolSave = True, cmap = 'bwr',filename = 'input.png')
+plot_surface(vel_map, params, boolShow= True, boolSave = True, cmap = 'jet',filename = 'input.png')
 
 """
 export the result into a fits file
@@ -206,7 +212,7 @@ data_1d = np.ravel(data)
 print(np.shape(data_1d))
 
 x0 = np.ones(np.shape(data_1d))
-x0 = [0*np.pi/180, 0, 0.0, 0, Rstar]
+x0 = [0*np.pi/180, 0, 0.0, 0, Rstar, 0]
 
 
 #least_squares

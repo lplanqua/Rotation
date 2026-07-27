@@ -7,8 +7,8 @@ from astropy.io import fits
 
 # sftp = pysftp.Connection('aop4.see.chalmers.se', username='leajul', password='Athena4.00')
 
-filepath = 'DATA/'
-filenames = glob.glob(filepath+'Betelgeuse*fit*')
+filepath = 'DATA/R_Leo/2025-09-27/'
+filenames = glob.glob(filepath+'R_Leo*fit*')
 print(filenames)
 
 for filename in filenames:
@@ -53,5 +53,5 @@ for filename in filenames:
     # hdul.close()
 
 
-#for log_file in glob.glob("casa-*.log"):
-#  os.remove(log_file)
+for log_file in glob.glob("casa-*.log"):
+  os.remove(log_file)
