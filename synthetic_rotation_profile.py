@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import least_squares
 from astropy.io import fits
-import glob
+import glob, os
 import emcee, corner
 from functions import *
 
@@ -11,7 +11,7 @@ plt.rcParams['font.size'] = 16
 
 #HARDCODE VARIABLES
 
-nbpix = 10 #lim*2 - 1#50 # nbpix
+nbpix = 30 #lim*2 - 1#50 # nbpix
 lim = 31 # size of the image in mas
 pix_size =2*(lim)/nbpix
 Rstar = 30
@@ -52,70 +52,6 @@ def log_posterior_diff(params, pix_arr, data):
         return -np.inf
     return lp + log_likelihood_diff(params, pix_arr, data)
 
-#
-#
-# def plot_surface(vel_map, params, cmap = 'jet', boolShow =True, boolSave = True, filename = None):
-#
-#
-#     axis_radian, vsini, vsys, vexp, Rshell, alpha = params
-#     if filename == None:
-#         filename = 'Figures/' +'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
-#         filename += '.png'
-#
-#     plt.figure(figsize = (12,12))
-#     # h = plt.contourf(X, Y, Rs)
-#     plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $R_{shell}$ = '+ str(np.round(Rshell,1))+' pix')
-#     vel_map[vel_map== 0] = np.nan
-#     h = plt.imshow(vel_map, extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = cmap)
-#
-#     plt.axis('scaled')
-#     ax = plt.gca()
-#     ax.tick_params(direction="in", which = 'both', top = True, right = True)
-#     if vsini != 0:
-#         ax.annotate("", xytext=(1.2*Rstar*np.sin(axis_radian), -1.2*Rstar*np.cos(axis_radian)), xy=(-1.2*Rstar*np.sin(axis_radian), 1.2*Rstar*np.cos(axis_radian)),
-#                     arrowprops=dict(arrowstyle="->",facecolor='black', lw = 2))
-#     ax.minorticks_on()
-#     cbar = plt.colorbar(label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
-#     # cbar.add_lines([vsys])
-#     cbar.ax.axhline(y=vsys, c='k')
-#     plt.xlabel(r'$\Delta \alpha$ [mas] (<--E)')
-#     plt.ylabel(r'$\Delta \delta$ [mas] (N-->)')
-#     if boolSave:
-#         plt.savefig(filename, bbox_inches = 'tight')
-#         print('saved as : ',filename)
-#     if boolShow:
-#         plt.show()
-#     else:
-#         plt.close()
-#     return True
-#
-#
-# def write_to_fits(vel_map, params, filename = None):
-#     axis_radian, vsini, vsys, vexp, Rshell, alpha = params
-#     if filename == None:
-#         filename = 'Figures/' + 'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
-#         filename += '.fits'
-#     hdr = fits.Header()
-#     hdr['BUNIT'] = 'km/s'
-#     hdr['BTYPE'] = 'velocity'
-#
-#     hdr['CRVAL1'] = 0
-#     hdr['CRVAL2'] = 0
-#
-#     hdr['CRPIX1'] = nbpix/2
-#     hdr['CRPIX2'] = nbpix/2
-#
-#     hdr['CRDELT1'] = -pix_size #should be negative for RA axis positive toward left
-#     hdr['CRDELT2'] = pix_size
-#
-#     # the units
-#     hdr['CUNIT1'] = 'mas'
-#     hdr['CUNIT1'] = 'mas'
-#
-#     hdu = fits.PrimaryHDU(vel_map, hdr)
-#
-#     hdu.writeto(filename, overwrite=True)
-#     return True
 
 
 
@@ -164,6 +100,11 @@ def velocity_dif(pix_arr,params):
 
 
 
+DIR = 'Figures/vel_diff_model/'
+
+if not os.path.exists(DIR):
+    os.makedirs(DIR)
+
 tot_pix = nbpix*nbpix
 pix_arr = np.arange(tot_pix)
 
@@ -173,7 +114,7 @@ core_params = nbpix, pix_size, lim, Rstar
 """
 The model parameters:
 """
-axis = 0 #in degrees
+axis = 50 #in degrees
 axis_radian = axis*np.pi/180
 
 vsini = 4 #km/s, should be positive
@@ -181,7 +122,7 @@ vsys = 0#4.9 #km/´s
 vexp = 0 #km/s, positive value for outflows
 Rshell = 30
 # pixel
-alpha = 0
+alpha = -4
 params = [axis_radian, vsini, vsys, vexp, alpha]
 
 
@@ -189,19 +130,19 @@ vel_map_1d = velocity_dif(pix_arr,params)
 
 #back to 2d-array for the visualization
 vel_map = np.reshape(vel_map_1d, (nbpix, nbpix))
-#
+
 
 """
 plot the result
 """
 title = r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $\alpha$ = '+ str(np.round(alpha,1))
-filename = f"alpha = {alpha:.1f}.png" #'input.png'
+filename = DIR + f"alpha = {alpha:.1f}.png" #'input.png'
 plot_surface(vel_map, params[0:4],core_params, boolShow= True, boolSave = True, cmap = 'bwr',title = title, filename = filename)
 
 """
 export the result into a fits file
 """
-write_to_fits(vel_map, params[0:4],core_params, filename = 'test.fits')
+write_to_fits(vel_map, params[0:4],core_params, filename = DIR + 'test.fits')
 
 
 """
@@ -212,7 +153,7 @@ read fits file and extract data
 # params = [45*np.pi/180, 5, 0.0, 2.0, 36.0]
 # axis_radian, vsini, vsys, vexp, Rshell = params
 
-filename = 'test.fits'
+filename = DIR +'test.fits'
 
 # filename = glob.glob(DIR+'*.fits')[0]
 print(filename)
@@ -244,7 +185,7 @@ print(res_lsq.x)
 print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 
 res_vel_map_1d = velocity_dif(pix_arr,res_lsq.x)
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = 'least_squares_fit.png')
+plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'least_squares_fit.png')
 err = 0.11
 chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err**2)
 print('chi2 = ', chi2)
@@ -269,7 +210,7 @@ params_MCMC = np.mean(samples, axis=0)
 print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3f}, vsys = {params_MCMC[2]:.3f}, vexp = {params_MCMC[3]:.3f}, alpha = {params_MCMC[4]:.3f}")
 
 MCMC_vel_map_1d = velocity_dif(pix_arr,params_MCMC)
-plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = 'MCMC_fit.png')
+plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'MCMC_fit.png')
 
 
 samples[:,0] = samples[:,0]*180/np.pi
@@ -283,6 +224,6 @@ fig = corner.corner(
 )
 
 
-plt.savefig('Corner.png', bbox_inches = 'tight')
+plt.savefig(DIR +'Corner.png', bbox_inches = 'tight')
 plt.show()
 
