@@ -21,8 +21,8 @@ plt.rcParams['font.size'] = 16
 
 
 
-starname = 'R_Leo' #or R_Dor, R_Leo or Betelgeuse
-date = '2025-09-11'
+starname = 'R_Dor' #or R_Dor, R_Leo or Betelgeuse
+date = '2023-10-04'
 
 
 
@@ -30,16 +30,14 @@ if starname == 'Betelgeuse':
     nbpix = 15 #lim*2 - 1#50 # nbpix
     lim = 22.5 # size of the image in mas
     pix_size =2*(lim)/nbpix
-    print(pix_size)
     Rstar = 21#22.6
     Rshell = 40
     vsys0 = 0
 
 elif starname == 'R_Dor':
-    nbpix = 17 #lim*2 - 1#50 # nbpix
-    lim = 25.5 # size of the image in mas
-    pix_size =2*(lim)/nbpix
-    print(pix_size)
+    # nbpix = 17 #lim*2 - 1#50 # nbpix
+    # lim = 25.5 # size of the image in mas
+    # pix_size =3 #*(lim)/nbpix
     Rstar = 24#22.6
     Rshell = 30
     vsys0 = 9.5
@@ -49,7 +47,7 @@ elif starname == 'R_Leo':
     nbpix = 15 #lim*2 - 1#50 # nbpix
     lim = 22.5 # size of the image in mas
     pix_size =2*(lim)/nbpix
-    print(pix_size)
+
     Rstar = 21#22.6
     Rshell = 30
     vsys0 = 10
@@ -156,8 +154,8 @@ toplim *=pix
 delta_xB = +5
 delta_yB = 0
 
-delta_xA = -5
-delta_yA = 0
+delta_xA = -6
+delta_yA = 3
 
 apertureB = 0.5 # in px
 apertureA = 0.5
@@ -176,7 +174,7 @@ res_spectrumA, _ = extract_aperture(res,  center-delta_xA,center-delta_yA, apert
 
 
 # fig = plt.figure(figsize = (12,40))
-fig, axs = plt.subplots(1,2,figsize=(14, 6))
+fig, axs = plt.subplots(1,2,figsize=(14, 6), constrained_layout = True)
 # ax = plt.gca()
 cmap = 'hot'
 Cmap = plt.get_cmap(cmap)

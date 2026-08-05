@@ -11,7 +11,7 @@ import emcee, corner
 
 plt.rcParams['font.size'] = 16
 
-starname = 'Betelgeuse' #or R_Dor or Betelgeuse or R_Leo
+starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 date = '2023-10-04'
 
 
@@ -27,11 +27,11 @@ if starname == 'Betelgeuse':
     vsys0 = 0
 
 elif starname == 'R_Dor':
-    nbpix = 17 #lim*2 - 1#50 # nbpix
-    lim = 25.5 # size of the image in mas
+    nbpix = 15 #lim*2 - 1#50 # nbpix
+    lim = 22.5 # size of the image in mas
     pix_size =2*(lim)/nbpix
     print(pix_size)
-    Rstar = 24#22.6
+    Rstar = 21#24#22.6
     Rshell = 40
     vsys0 = 9.5
 

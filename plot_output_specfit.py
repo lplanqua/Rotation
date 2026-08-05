@@ -7,7 +7,7 @@ import glob
 
 plt.rcParams['font.size'] = 16
 
-starname = 'Betelgeuse' #or R_Dor, R_Leo or Betelgeuse
+starname = 'R_Dor' #or , R_Leo or Betelgeuse
 date = '2023-10-04'
 
 #HARDCODE VARIABLES
