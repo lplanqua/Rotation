@@ -8,11 +8,14 @@ from astropy.io import fits
 import glob
 import emcee, corner
 
-
 plt.rcParams['font.size'] = 16
 
-starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
-date = '2023-10-04'
+
+
+
+
+starname = 'R_Leo' #or R_Dor or Betelgeuse or R_Leo
+date = '2025-07-15'
 
 
 #HARDCODE VARIABLES
@@ -62,6 +65,7 @@ config.write('pix_size = '+str(pix_size) +'\n')
 config.write('lim = '+str(lim) +'\n')
 config.write('Rstar = '+str(Rstar) +'\n')
 config.write('Rshell = '+str(Rshell) +'\n')
+config.write('starname = '+'"'+str(starname)+ '"' +'\n')
 config.close()
 
 
@@ -69,7 +73,7 @@ from functions import *
 
 inputfile = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')[0]
 inputfile_err = glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
-betel_data, core_params = read_fits(inputfile, Rstar)
+input_data, core_params = read_fits(inputfile, Rstar)
 nbpix, pix_size, lim, Rstar = core_params
 
 
@@ -79,80 +83,39 @@ print(core_params)
 tot_pix = nbpix*nbpix
 pix_arr = np.arange(tot_pix)
 
-"""
-The model parameters:
-"""
-axis = 45 #in degrees
-axis_radian = axis*np.pi/180
 
-vsini = 15 #km/s, should be positive
-vsys = 0#4.9 #km/s
-vexp = 2#1.7 #km/s, positive value for outflows
-# Rshell = 36 # pixel
-params = [axis_radian, vsini, vsys, vexp]
-
-#intial value
+#The intial parameters:
 x0 = [90*np.pi/180, 0, vsys0, 0]
 
-err_scalar = 0.11
+#The error map
 err,_ = read_fits(inputfile_err, Rstar)
 err = np.ravel(err) + 1E-11
 
 
-# plot_surface(np.reshape(betel_data, (nbpix, nbpix)), x0, core_params, cmap = 'seismic',boolShow= True)
 
-#to replace by betelgeuse data
-vel_map_1d = betel_data #velocity(pix_arr,params)
+#copy the input data
+vel_map_1d = np.copy(input_data)
 
 #back to 2d-array for the visualization
 vel_map = np.reshape(vel_map_1d, (nbpix, nbpix))
 # print(vel_map_1d)
 
-"""
-plot the result
-"""
-# plot_surface(vel_map, x0, core_params, boolShow= True, boolSave = True, cmap = 'bwr',filename = 'input.png')
 
-"""
-export the result into a fits file
-"""
 
 output_dir = 'RESULTS/' + starname+ '/'
 if starname == 'R_Dor':
     output_dir += date
 
-filename = output_dir + inputfile[len(input_dir):-5]+'_input.fits'
-write_to_fits(vel_map, params, core_params, filename = filename)
 
+plot_surface(input_data, x0,core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
+# plot_surface(np.reshape(err, (nbpix, nbpix)), x0, core_params,cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_err.png')
 
-
-"""
-read fits file and extract data
-"""
-# filename = glob.glob(DIR+'*.fits')[0]
-print('saved as : ', filename)
-
-with fits.open(filename) as hdul:
-   data = hdul[0].data
-   hdr = hdul[0].header
-
-#need to extract the parameters for the image
-
-# print(data)
-plot_surface(data, x0,core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
-plot_surface(np.reshape(err, (nbpix, nbpix)), x0, core_params,cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_err.png')
-
-data_1d =  np.ravel(data)
-print(np.shape(betel_data))
 
 #to work directly on th efile
 data_1d = np.ravel(vel_map_1d)
 
-# # x0 = np.ones(np.shape(data_1d))
-
 
 #least_squares
-
 
 res_lsq = least_squares(model, x0, args=(pix_arr, data_1d))
 
@@ -160,17 +123,21 @@ print('least squared reulst = ', res_lsq.x)
 print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 
 res_vel_map_1d = velocity(pix_arr,res_lsq.x)
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
-#
-chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err**2)
+# print(data_1d)
+# print(data_1d - res_vel_map_1d)
+# print(err)
+chi2 = np.nansum(((data_1d - res_vel_map_1d)**2)/err**2)
 print('chi2 = ', chi2)
-chi2r = chi2/len(data_1d)
+chi2r = chi2/np.count_nonzero(data_1d)
 print('chi2r = ', chi2r)
+
+plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
+
 
 
 
 #MCMC fit
-ndim = len(params)
+ndim = len(x0)
 nwalkers = 50
 initial_guess = x0
 pos = initial_guess + 1e-4*np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
@@ -244,17 +211,6 @@ print("flat log prob shape: {0}".format(log_prob_samples.shape))
 
 
 
-
-
-
-
-
-
-# nstep = 1000000
-# print("Running MCMC...")
-# sampler.run_mcmc(pos, nstep, progress=True)
-#Results
-# burn_in = int(nstep*0.1)
 samples = sampler.get_chain(discard=burnin, flat=True)
 
 
@@ -263,12 +219,26 @@ print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3
 
 MCMC_vel_map_1d = velocity(pix_arr,params_MCMC)
 
-chi2 = np.sum(((data_1d - MCMC_vel_map_1d)**2)/err**2)
+chi2 = np.nansum(((data_1d - MCMC_vel_map_1d)**2)/err**2)
 print('chi2 from MCMC = ', chi2)
-chi2r = chi2/len(data_1d)
+chi2r = chi2/np.count_nonzero(data_1d)
 print('chi2r = ', chi2r)
 
-plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC, core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_result_mcmc.png')
+MCMC_vel_map = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
+plot_surface(MCMC_vel_map, params_MCMC, core_params, cmap = 'seismic',chi2r = chi2r, boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_result_mcmc.png')
+
+
+"""
+save data and results into a  fits file
+"""
+
+filename = output_dir + inputfile[len(input_dir):-5]+ '_results.fits'
+print('saved as : ', filename)
+write_to_fits([input_data, MCMC_vel_map,input_data - MCMC_vel_map], params_MCMC, core_params, filename = filename)
+
+"""
+Corner plot
+"""
 
 
 samples[:,0] = samples[:,0]*180/np.pi

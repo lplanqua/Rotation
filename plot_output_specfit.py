@@ -7,8 +7,8 @@ import glob
 
 plt.rcParams['font.size'] = 16
 
-starname = 'R_Dor' #or , R_Leo or Betelgeuse
-date = '2023-10-04'
+starname = 'R_Leo' # R_Dor , R_Leo or Betelgeuse
+date = '2025-07-15'
 
 #HARDCODE VARIABLES
 
@@ -48,7 +48,8 @@ if starname == 'Betelgeuse':
     input_dir =  'DATA/'+starname+ '/'
 
 elif starname == 'R_Dor' or starname == 'R_Leo':
-    transition = 'SiO_v=2_8-7'
+    transition = 'SiO_v=2_8-7' #'SO_3_v=1_8-7'
+    transition = 'CO_v=1_3-2'
     input_dir =  'DATA/'+starname+ '/' + date + '/'
 
 

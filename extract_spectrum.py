@@ -21,8 +21,8 @@ plt.rcParams['font.size'] = 16
 
 
 
-starname = 'R_Dor' #or R_Dor, R_Leo or Betelgeuse
-date = '2023-10-04'
+starname = 'R_Leo' #or R_Dor, R_Leo or Betelgeuse
+date = '2025-07-15'
 
 
 
@@ -62,6 +62,7 @@ if starname == 'Betelgeuse':
 
 elif starname == 'R_Dor' or starname == 'R_Leo':
     transition = 'SiO_v=2_8-7'
+    transition = 'SO_3_v=1_8-7'
     input_dir =  'DATA/'+starname+ '/' + date + '/'
 
 
@@ -223,7 +224,7 @@ axs[1].minorticks_on()
 
 
 
-plt.savefig(input_dir + starname+ '_'+ transition + '_' + date + '_extract_spectrum.png', bbox_inches = 'tight')
+plt.savefig(input_dir + starname+ '_'+ transition + '_' + date + '_extract_spectrum.png')
 plt.show()
 
 

@@ -11,8 +11,6 @@ import config
 
 
 
-
-
 """
 Some useful functions for the fit
 """
@@ -125,7 +123,7 @@ def pad_with(vector, pad_width, iaxis, kwargs):
     vector[:pad_width[0]] = pad_value
     vector[-pad_width[1]:] = pad_value
 
-def plot_surface(vel_map, params,core_params, cmap = 'jet', boolShow =True, boolSave = True, filename = None, title = None):
+def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
 
 
     axis_radian, vsini, vsys, vexp = params
@@ -151,8 +149,10 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', boolShow =True, bool
     vel_map[vel_map== 0] = np.nan
     #padding
     vel_map_pad = np.pad(vel_map, 1, pad_with)
-
-    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vsys))
+    vcenter =vsys
+    if config.starname == 'Betelgeuse':
+        vcenter = 0
+    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vcenter))
 
     plt.axis('scaled')
     ax = plt.gca()
@@ -164,6 +164,8 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', boolShow =True, bool
                     arrowprops=dict(arrowstyle="->",facecolor='black', lw = 3))
         p = draw_self_loop(center=(-1.05*Rstar*np.sin(axis_radian), 1.05*Rstar*np.cos(axis_radian)),radius=2, rota = axis_radian*180/np.pi)
         # ax.add_collection(p)
+        if chi2r != None:
+            ax.annotate(r"$\chi^2_r = $"+"{:.2f}".format(chi2r),xy = (0.8,0.05), xycoords = 'axes fraction')
     ax.minorticks_on()
     cbar = plt.colorbar(label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
     # cbar.add_lines([vsys])
@@ -191,8 +193,8 @@ def write_to_fits(vel_map, params, core_params, filename = None):
     hdr['BUNIT'] = 'km/s'
     hdr['BTYPE'] = 'velocity'
 
-    hdr['CRVAL1'] = nbpix/4
-    hdr['CRVAL2'] = nbpix/4
+    hdr['CRVAL1'] = 0 #nbpix/2
+    hdr['CRVAL2'] = 0 #nbpix/2
 
     hdr['CRPIX1'] = nbpix/2
     hdr['CRPIX2'] = nbpix/2
