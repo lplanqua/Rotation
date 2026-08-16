@@ -6,7 +6,7 @@ import glob, os
 import emcee, corner
 from functions import *
 
-plt.rcParams['font.size'] = 16
+
 
 
 #HARDCODE VARIABLES

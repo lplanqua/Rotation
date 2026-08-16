@@ -21,8 +21,8 @@ plt.rcParams['font.size'] = 16
 
 
 
-starname = 'R_Leo' #or R_Dor, R_Leo or Betelgeuse
-date = '2025-07-15'
+starname = 'R_Dor' #or R_Dor, R_Leo or Betelgeuse
+date = '2023-10-12'
 
 
 
@@ -61,8 +61,8 @@ if starname == 'Betelgeuse':
     input_dir =  'DATA/'+starname+ '/'
 
 elif starname == 'R_Dor' or starname == 'R_Leo':
-    transition = 'SiO_v=2_8-7'
-    transition = 'SO_3_v=1_8-7'
+    transition = 'SiO_v=2_8-7*large_scale'
+    # transition = 'SO_3_v=1_8-7'
     input_dir =  'DATA/'+starname+ '/' + date + '/'
 
 
@@ -152,26 +152,29 @@ toplim *=pix
 
 
 #info on the aperture
-delta_xB = +5
+delta_xB = -20
 delta_yB = 0
 
 delta_xA = -6
-delta_yA = 3
+delta_yA = 0
+
+delta_xC = 4
+delta_yC = 0
 
 apertureB = 0.5 # in px
 apertureA = 0.5
-# aperture = # in px
-px = center-delta_xB #columns
-py = center-delta_yB #rows
-# print(px, py)
+apertureC = 0.5
+
 
 spectrumB, dataB = extract_aperture(maps, center-delta_xB,center-delta_yB, apertureB )
 spectrumA, dataA = extract_aperture(maps,  center-delta_xA,center-delta_yA, apertureA )
+spectrumC, dataC = extract_aperture(maps,  center-delta_xC,center-delta_yC, apertureC )
 
 
 
 res_spectrumB, _ = extract_aperture(res, center-delta_xB,center-delta_yB, apertureB )
 res_spectrumA, _ = extract_aperture(res,  center-delta_xA,center-delta_yA, apertureA )
+res_spectrumC, _ = extract_aperture(res,  center-delta_xC,center-delta_yC, apertureC )
 
 
 # fig = plt.figure(figsize = (12,40))
@@ -190,6 +193,9 @@ axs[0].add_patch(blobB)
 axs[0].imshow(dataA, cmap = 'Greens_r',  origin = 'lower', alpha = 1, extent = [leftlim, rightlim, bottomlim, toplim])#, extent=extent, alpha = 0.5)
 blobA = Circle(((center+delta_xA)*pix, (center-delta_yA)*pix), radius = apertureA*pix, color='green', fill=False,linewidth=3)
 axs[0].add_patch(blobA)
+
+blobC = Circle(((center+delta_xC)*pix, (center-delta_yC)*pix), radius = apertureC*pix, color='pink', fill=False,linewidth=3)
+axs[0].add_patch(blobC)
 #axs[0].plot(py,px, '*', lw = 8, color = 'lime')
 
 
@@ -207,13 +213,15 @@ axs[1].plot(channels,spectrumB+ res_spectrumB,  color = 'blue',drawstyle='steps-
 axs[1].plot(channels,spectrumB,  color = 'darkblue', ls = '--', lw = 2,label = 'Fit')
 # axs[1].axhline(y = 0, ls='--', color = 'blue', alpha = 0.5)
 plt.legend(loc = 2)
-# ax2 = axs[1].twinx()
-# secax.set_ylabel('Secondary-Y-Axis')
 
 axs[1].plot(channels,res_spectrumA+ spectrumA,  color = 'green',drawstyle='steps-mid', label = 'Blob G')
 axs[1].plot(channels,spectrumA,  color = 'darkgreen', ls = '--', lw = 2,label = 'Fit')
+
+axs[1].plot(channels,res_spectrumC+ spectrumC,  color = 'pink',drawstyle='steps-mid', label = 'Blob P')
+axs[1].plot(channels,spectrumC,  color = 'pink', ls = '--', lw = 2,label = 'Fit')
+
 #plt.plot(xfit, fit_y, '-', color = 'red')
-plt.legend(loc = 3)
+# plt.legend(loc = 3)
 axs[1].axvline(x = 0, ls='--', color = 'black', alpha = 0.5)
 axs[1].axhline(y = 0, ls='--', color = 'black', alpha = 0.5)
 axs[1].set_ylabel(r'Flux density [Jy/beam]')

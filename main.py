@@ -14,7 +14,7 @@ plt.rcParams['font.size'] = 16
 
 
 
-starname = 'R_Leo' #or R_Dor or Betelgeuse or R_Leo
+starname = 'Betelgeuse' #or R_Dor or Betelgeuse or R_Leo
 date = '2025-07-15'
 
 
@@ -53,6 +53,7 @@ elif starname == 'R_Leo':
 #reading an actual file
 if starname == 'Betelgeuse':
     transition = '28SiOv2'
+    transition = '28SiOv1' # 29SiOv0 28SiOv1  28SiOv2 12CO
     input_dir = 'DATA/' + starname+ '/'
 elif starname == 'R_Dor' or starname == 'R_Leo':
     transition = 'SiO_v=2_8-7'
@@ -85,7 +86,7 @@ pix_arr = np.arange(tot_pix)
 
 
 #The intial parameters:
-x0 = [90*np.pi/180, 0, vsys0, 0]
+x0 = [200*np.pi/180, 0, vsys0, 0]
 
 #The error map
 err,_ = read_fits(inputfile_err, Rstar)

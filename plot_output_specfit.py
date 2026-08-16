@@ -2,13 +2,14 @@ import numpy as np
 from functions import *
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.patches import Circle
 from astropy.io import fits
 import glob
 
 plt.rcParams['font.size'] = 16
 
-starname = 'R_Leo' # R_Dor , R_Leo or Betelgeuse
-date = '2025-07-15'
+starname = 'R_Dor' # R_Dor , R_Leo or Betelgeuse
+date = '2023-10-12'
 
 #HARDCODE VARIABLES
 
@@ -48,8 +49,8 @@ if starname == 'Betelgeuse':
     input_dir =  'DATA/'+starname+ '/'
 
 elif starname == 'R_Dor' or starname == 'R_Leo':
-    transition = 'SiO_v=2_8-7' #'SO_3_v=1_8-7'
-    transition = 'CO_v=1_3-2'
+    transition = 'SiO_v=2_8-7.clean.large_scale' #'SO_3_v=1_8-7' 'SiO_v=2_8-7'
+    # transition = 'CO_v=1_3-2'
     input_dir =  'DATA/'+starname+ '/' + date + '/'
 
 
@@ -86,8 +87,11 @@ def create_subplot(ax, data, title, cmap):
     ax.tick_params(direction="in", which = 'both', top = True, right = True)
     ax.minorticks_on()
     fig.colorbar(img, ax=ax, pad = 0.001,  fraction=0.01,aspect=100)
+    stellarR = Circle((np.shape(data)[0]/2, np.shape(data)[0]/2), radius = 7.5, color='lime', fill=False,linewidth=2)
+    ax.add_patch(stellarR)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+
 
     return True
 

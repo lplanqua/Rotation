@@ -1,17 +1,16 @@
 from casatasks import exportfits
 import glob, os
-import pysftp
-from astropy.io import fits
+# from astropy.io import fits
 # from generate_Moment_Maps import *
 
-starname = 'R_Leo'
-date = '2025-07-15'
+starname = 'R_Dor'
+date = '2023-10-12'
 filepath = 'DATA/'+ starname+ '/' + date + '/'
 filenames = glob.glob(filepath+ starname+'*fit*')
 print(filenames)
 
 for filename in filenames:
-    print(filename)
+    # print(filename)
     if '.fits' in filename:
       continue
     nameout = filepath +filename[len(filepath)::]+".fits"
