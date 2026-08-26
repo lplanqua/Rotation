@@ -3,4 +3,4 @@ pix_size = 3.0
 lim = 22.5
 Rstar = 21
 Rshell = 40
-starname = "Betelgeuse"
+starname = "R_Dor"

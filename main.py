@@ -14,8 +14,8 @@ plt.rcParams['font.size'] = 16
 
 
 
-starname = 'Betelgeuse' #or R_Dor or Betelgeuse or R_Leo
-date = '2025-07-15'
+starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
+date = '2023-10-09'
 
 
 #HARDCODE VARIABLES

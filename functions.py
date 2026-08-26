@@ -152,7 +152,7 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
     vcenter =vsys
     if config.starname == 'Betelgeuse':
         vcenter = 0
-    h = plt.imshow(vel_map_pad, extent = [+lim+ pix_size, -lim-pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vcenter))
+    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vcenter))
 
     plt.axis('scaled')
     ax = plt.gca()

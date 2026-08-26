@@ -1,4 +1,4 @@
-from casatasks import specfit, exportfits
+from casatasks import specfit, exportfits, importfits
 import glob, os
 
 
@@ -15,15 +15,17 @@ filepath = 'DATA/'+ starname+ '/' + date + '/'
 
 
 basename= filepath + starname + "_"+ transition +  ".clean"
-
-image=basename+".image"
+fitsimage = 'alma_rotating_expanding_envelope.fits'
+basename = 'alma_rotating_expanding_envelope.image'
+importfits(fitsimage, imagename=basename, overwrite  = True)
+image=basename#+".image"
 #basename="R_Dor_29SiO_v=1_8-7.clean"
 #  basename="Betelgeuse.29SiOv0"
 #  basename="Betelgeuse.28SiOv1"
 #  basename="Betelgeuse.12CO"
 pest=[10,50,25,"lorentzian"]  # initial fit estimates
 pest = [0.2,36,12,"gaussian"]
-#  regs='circle[[253pix,254pix],15pix]' 
+#  regs='circle[[253pix,254pix],15pix]'
 
 if starname == 'R_Dor':
   regs='circle[[127pix,146pix],7pix]'
@@ -155,7 +157,7 @@ if(mystep in thesteps):
             outfile=image+'.mom11')
 
 
-  
+
 mystep = 3
 if(mystep in thesteps):
   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
@@ -164,7 +166,7 @@ if(mystep in thesteps):
   basename="R_Dor_SiO_v=2_8-7"
   pest1=[-42,36,12,"gaussian"]
   pest2=[13,44,8,"gaussian"]
-  masks='circle[[121pix,138pix],8pix]' 
+  masks='circle[[121pix,138pix],8pix]'
 
   image=basename+".clean.image"
   fitbase=basename+".2comp.fit"

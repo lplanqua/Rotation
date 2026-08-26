@@ -7,14 +7,15 @@ import emcee, corner
 from functions import *
 
 
+plt.rcParams['font.size'] = 16
 
 
 #HARDCODE VARIABLES
 
-nbpix = 30 #lim*2 - 1#50 # nbpix
-lim = 31 # size of the image in mas
+nbpix = 15*3 #lim*2 - 1#50 # nbpix
+lim = 22.5 # size of the image in mas
 pix_size =2*(lim)/nbpix
-Rstar = 30
+Rstar = 21
 
 """
 Some useful functions
@@ -114,15 +115,15 @@ core_params = nbpix, pix_size, lim, Rstar
 """
 The model parameters:
 """
-axis = 50 #in degrees
+axis = 170 #in degrees
 axis_radian = axis*np.pi/180
 
-vsini = 4 #km/s, should be positive
+vsini = 0.2 #km/s, should be positive
 vsys = 0#4.9 #km/´s
-vexp = 0 #km/s, positive value for outflows
+vexp = 2 #km/s, positive value for outflows
 Rshell = 30
 # pixel
-alpha = -4
+alpha = 0
 params = [axis_radian, vsini, vsys, vexp, alpha]
 
 
