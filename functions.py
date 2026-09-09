@@ -58,7 +58,7 @@ def log_prior(params):
     axis_radian, vsini, vsys, vexp = params
     if vsini <0:
         return -np.inf
-    if axis_radian< 0:#-0.5*np.pi:
+    if axis_radian< 0.5*np.pi:
         return -np.inf
     if axis_radian > 2.5*np.pi:
         return -np.inf

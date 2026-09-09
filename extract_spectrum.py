@@ -1,4 +1,4 @@
-import os, glob
+import os, glob, sys
 from pathlib import Path
 from time import time
 import warnings
@@ -17,12 +17,31 @@ import config
 
 from matplotlib.gridspec import GridSpec
 
+args = sys.argv
+
 plt.rcParams['font.size'] = 16
-
-
 
 starname = 'R_Leo' #or R_Dor, R_Leo or Betelgeuse
 date = '2025-07-15'
+
+if (len(args) > 1):
+    if "-i" in args:
+        starname = args[args.index("-i") + 1 ]
+
+    if "-date" in args:
+        date = args[args.index("-date") + 1 ]
+    if '-l' in args:
+        suffix = '.clean.large_scale.fit2'
+    else:
+        suffix = '.clean.fit2'
+    if "-line" in args:
+        transition = args[args.index("-line") + 1 ]
+        transition += suffix
+
+
+
+
+
 
 
 
@@ -61,8 +80,8 @@ if starname == 'Betelgeuse':
     input_dir =  'DATA/'+starname+ '/'
 
 elif starname == 'R_Dor' or starname == 'R_Leo':
-    transition = 'SiO_v=2_8-7*large_scale'
-    transition = 'SiO_v=3_8-7'
+    # transition = 'SiO_v=2_8-7'
+    # transition = 'SiO_v=3_8-7'
     input_dir =  'DATA/'+starname+ '/' + date + '/'
 
 
@@ -152,14 +171,14 @@ toplim *=pix
 
 
 #info on the aperture
-delta_xB = -20
+delta_xB = -0
 delta_yB = 0
 
-delta_xA = -6
-delta_yA = 0
+delta_xA = -4
+delta_yA =-4
 
-delta_xC = 4
-delta_yC = 0
+delta_xC = 3
+delta_yC = 2
 
 apertureB = 0.5 # in px
 apertureA = 0.5
@@ -196,6 +215,9 @@ axs[0].add_patch(blobA)
 
 blobC = Circle(((center+delta_xC)*pix, (center-delta_yC)*pix), radius = apertureC*pix, color='pink', fill=False,linewidth=3)
 axs[0].add_patch(blobC)
+
+stellarR = Circle((0,0), radius = (Rstar), color='lime', fill=False,linewidth=2)
+axs[0].add_patch(stellarR)
 #axs[0].plot(py,px, '*', lw = 8, color = 'lime')
 
 
@@ -212,7 +234,7 @@ axs[0].set_ylabel(r'$\Delta$DEC [mas]')
 axs[1].plot(channels,spectrumB+ res_spectrumB,  color = 'blue',drawstyle='steps-mid', label = 'Blob B')
 axs[1].plot(channels,spectrumB,  color = 'darkblue', ls = '--', lw = 2,label = 'Fit')
 # axs[1].axhline(y = 0, ls='--', color = 'blue', alpha = 0.5)
-plt.legend(loc = 2)
+# plt.legend(loc = 2)
 
 axs[1].plot(channels,res_spectrumA+ spectrumA,  color = 'green',drawstyle='steps-mid', label = 'Blob G')
 axs[1].plot(channels,spectrumA,  color = 'darkgreen', ls = '--', lw = 2,label = 'Fit')

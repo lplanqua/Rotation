@@ -4,12 +4,36 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Circle
 from astropy.io import fits
-import glob
+import glob, sys
+
 
 plt.rcParams['font.size'] = 16
 
+args = sys.argv
+
 starname = 'R_Leo' # R_Dor , R_Leo or Betelgeuse
-date = '2025-07-15'
+
+
+if starname == 'R_Leo':
+    date = '2025-07-15'
+elif starname == 'R_Dor':
+    date = '2023-10-12'
+
+if (len(args) > 1):
+    if "-i" in args:
+        starname = args[args.index("-i") + 1 ]
+
+    if "-date" in args:
+        date = args[args.index("-date") + 1 ]
+    if '-l' in args:
+        suffix = '.clean.large_scale.fit2'
+    else:
+        suffix = '.clean.fit2'
+    if "-line" in args:
+        transition = args[args.index("-line") + 1 ]
+        transition += suffix
+
+
 
 #HARDCODE VARIABLES
 
@@ -44,13 +68,14 @@ elif starname == 'R_Leo':
 
 
 if starname == 'Betelgeuse':
-    transition = '28SiOv2'
+    # transition = '28SiOv2'´
     # transition = '12CO'
     input_dir =  'DATA/'+starname+ '/'
 
 elif starname == 'R_Dor' or starname == 'R_Leo':
-    transition = 'SiO_v=3_8-7.clean.large_scale' #'SO_3_v=1_8-7' 'SiO_v=2_8-7'
-    transition = 'SiO_v=2_8-7'
+    # transition = 'SiO_v=3_8-7' #'SO_3_v=1_8-7' 'SiO_v=2_8-7'
+    # transition = '29SiO_v=1_8-7'
+
     input_dir =  'DATA/'+starname+ '/' + date + '/'
 
 
@@ -87,7 +112,7 @@ def create_subplot(ax, data, title, cmap):
     ax.tick_params(direction="in", which = 'both', top = True, right = True)
     ax.minorticks_on()
     fig.colorbar(img, ax=ax, pad = 0.001,  fraction=0.01,aspect=100)
-    stellarR = Circle((np.shape(data)[0]/2, np.shape(data)[0]/2), radius = 7.5, color='lime', fill=False,linewidth=2)
+    stellarR = Circle((np.shape(data)[0]//2, np.shape(data)[0]//2), radius = (Rstar/pix_size), color='lime', fill=False,linewidth=2)
     ax.add_patch(stellarR)
     ax.set_xticklabels([])
     ax.set_yticklabels([])

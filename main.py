@@ -5,17 +5,32 @@ import matplotlib.colors as colors
 import numpy as np
 from scipy.optimize import least_squares
 from astropy.io import fits
-import glob
+import glob, sys
 import emcee, corner
 
 plt.rcParams['font.size'] = 16
 
-
-
-
-
 starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 date = '2023-10-09'
+
+
+args = sys.argv
+
+if (len(args) > 1):
+    if "-i" in args:
+        starname = args[args.index("-i") + 1 ]
+
+    if "-date" in args:
+        date = args[args.index("-date") + 1 ]
+
+    if "-line" in args:
+        transition = args[args.index("-line") + 1 ]
+        suffix = '.clean.fit2'
+        transition += suffix
+
+
+
+
 
 
 #HARDCODE VARIABLES
@@ -30,13 +45,13 @@ if starname == 'Betelgeuse':
     vsys0 = 0
 
 elif starname == 'R_Dor':
-    nbpix = 15 #lim*2 - 1#50 # nbpix
-    lim = 22.5 # size of the image in mas
+    nbpix = 17 #lim*2 - 1#50 # nbpix
+    lim = 25.5 # size of the image in mas
     pix_size =2*(lim)/nbpix
     print(pix_size)
-    Rstar = 21#24#22.6
-    Rshell = 40
-    vsys0 = 9.5
+    Rstar = 24#21#22.6
+    Rshell = 27
+    vsys0 = 5.5
 
 
 elif starname == 'R_Leo':
@@ -56,7 +71,7 @@ if starname == 'Betelgeuse':
     transition = '28SiOv1' # 29SiOv0 28SiOv1  28SiOv2 12CO
     input_dir = 'DATA/' + starname+ '/'
 elif starname == 'R_Dor' or starname == 'R_Leo':
-    transition = 'SiO_v=2_8-7'
+    # transition = 'SiO_v=2_8-7'
     input_dir = 'DATA/' + starname+ '/' + date + '/'
 
 
@@ -86,7 +101,7 @@ pix_arr = np.arange(tot_pix)
 
 
 #The intial parameters:
-x0 = [200*np.pi/180, 0, vsys0, 0]
+x0 = [300*np.pi/180, 0, vsys0, 0]
 
 #The error map
 err,_ = read_fits(inputfile_err, Rstar)

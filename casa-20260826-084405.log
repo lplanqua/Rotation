@@ -1,9 +1,0 @@
-2026-08-26 08:44:06	INFO	::casa	
-2026-08-26 08:44:06	INFO	::casa	data_update: version installed or checked less than 1 day ago, nothing updated or checked
-2026-08-26 08:44:06	SEVERE	::casa	
-2026-08-26 08:44:06	SEVERE	::casa	ERROR! Unexpected exception while doing auto updates or checking on the status of the data at measurespath
-2026-08-26 08:44:06	SEVERE	::casa	visit https://casadocs.readthedocs.io/en/stable/notebooks/external-data.html for more information
-2026-08-26 08:44:06	SEVERE	::casa	
-2026-08-26 08:44:06	INFO	::casa	
-2026-08-26 08:44:06	INFO	::casa	Python version 3.8.20
-2026-08-26 08:44:06	INFO	::casa	CASA Version MODULAR 6.6.5.31

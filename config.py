@@ -1,6 +1,6 @@
-nbpix = 15
+nbpix = 17
 pix_size = 3.0
-lim = 22.5
-Rstar = 21
-Rshell = 40
+lim = 25.5
+Rstar = 24
+Rshell = 27
 starname = "R_Dor"

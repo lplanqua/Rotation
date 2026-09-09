@@ -1,14 +1,30 @@
 from casatasks import specfit, exportfits
-import glob, os
+import glob, os, sys
 
+args = sys.argv
 
-starname = 'R_Leo' #or R_Dor or Betelgeuse or R_Leo
+starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 
 date = '2023-10-12'
 
+
+if (len(args) > 1):
+    if "-i" in args:
+        starname = args[args.index("-i") + 1 ]
+
+    if "-date" in args:
+        date = args[args.index("-date") + 1 ]
+    if "-line" in args:
+        transition = args[args.index("-line") + 1 ]
+
+
+
 if starname == 'R_Leo':
   date = '2025-07-15'
-transition = 'SiO_v=3_8-7'
+# transition = '29SiO_v=1_8-7'
+
+
+
 # transition = 'CO_v=1_3-2'
 filepath = 'DATA/'+ starname+ '/' + date + '/'
 
@@ -24,24 +40,39 @@ image=basename+".image"
 pest=[10,50,25,"lorentzian"]  # initial fit estimates
 pest = [0.2,36,12,"gaussian"]
 #  regs='circle[[253pix,254pix],15pix]' 
+if '-l' in args:
+  # suffix = '.clean.large_scale.fit2'
+  basename = basename+ '.large_scale'
 
 if starname == 'R_Dor':
-  regs='circle[[127pix,146pix],7pix]'
-  regs='circle[[127pix,146pix],27pix]'
+
+  if date == '2023-10-12':
+    center = '[127pix,146pix]'
+  elif date == '2023-10-06' or date == '2023-10-04' :
+    center = '[121pix,141pix]'
+  elif date == '2023-10-09':
+    center = '[116pix,143pix]'
+
+  regs='circle['+ center+ ',8pix]'
+    #
 
 elif starname == 'R_Leo':
-  regs='circle[[156pix,156pix],7pix]'
+  center = '[156pix,156pix]'
+  regs='circle['+ center+ ',7pix]'
 
 
+if 'large_scale' in basename:
+  regs = 'annulus['+ center+ ',[7pix,12pix]]'
+  regs='circle['+ center+ ',12pix]'
 
-amprange=[-0.2,0.2]
+amprange=[-0,0.5]
 centerrange=[0]#[25,65]   # in pixels!
 fwhmrange = [2,25]
 
 
 #name of the output file
 
-basename = basename+ '.large_scale'
+#
 
 fitbase=basename+".fit2"
 modelfile=fitbase+".model.image"
