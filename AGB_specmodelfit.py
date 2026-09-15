@@ -8,6 +8,9 @@ starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 date = '2023-10-12'
 
 
+if starname == 'R_Leo':
+  date = '2025-07-15'
+
 if (len(args) > 1):
     if "-i" in args:
         starname = args[args.index("-i") + 1 ]
@@ -19,8 +22,6 @@ if (len(args) > 1):
 
 
 
-if starname == 'R_Leo':
-  date = '2025-07-15'
 # transition = '29SiO_v=1_8-7'
 
 
@@ -45,6 +46,7 @@ if '-l' in args:
   basename = basename+ '.large_scale'
 
 if starname == 'R_Dor':
+  Rstar = 8
 
   if date == '2023-10-12':
     center = '[127pix,146pix]'
@@ -52,22 +54,26 @@ if starname == 'R_Dor':
     center = '[121pix,141pix]'
   elif date == '2023-10-09':
     center = '[116pix,143pix]'
-
-  regs='circle['+ center+ ',8pix]'
+  else:
+    center = '[116pix,143pix]'
+  regs='circle['+ center+ ',' +str(Rstar)+'pix]'
     #
 
 elif starname == 'R_Leo':
+  Rstar = 7
   center = '[156pix,156pix]'
-  regs='circle['+ center+ ',7pix]'
+  if date == '2023-11-04':
+    center = '[146pix,156pix]'
+  regs='circle['+ center+ ',' +str(Rstar)+'pix]'
 
 
 if 'large_scale' in basename:
-  regs = 'annulus['+ center+ ',[7pix,12pix]]'
-  regs='circle['+ center+ ',12pix]'
+  regs = 'annulus['+ center+ ',[' +str(Rstar)+'pix,24pix]]'
+  #regs='circle['+ center+ ',22pix]'
 
-amprange=[-0,0.5]
-centerrange=[0]#[25,65]   # in pixels!
-fwhmrange = [2,25]
+amprange=[-0.5,5E3]
+centerrange=[0]#,40]#[25,65]   # in pixels!
+fwhmrange = [1,55]
 
 
 #name of the output file

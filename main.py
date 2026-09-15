@@ -16,17 +16,23 @@ date = '2023-10-09'
 
 args = sys.argv
 
+boolShell = False
+suffix = '.clean.fit2'
+
 if (len(args) > 1):
     if "-i" in args:
         starname = args[args.index("-i") + 1 ]
 
     if "-date" in args:
         date = args[args.index("-date") + 1 ]
-
+    if "-shell" in args:
+        boolShell = True
+        suffix = '.clean.large_scale'
     if "-line" in args:
         transition = args[args.index("-line") + 1 ]
-        suffix = '.clean.fit2'
         transition += suffix
+
+
 
 
 
@@ -61,7 +67,16 @@ elif starname == 'R_Leo':
     print(pix_size)
     Rstar = 21#22.6
     Rshell = 30
-    vsys0 = 10
+    vsys0 = -0.5
+
+if boolShell:
+
+    Rshell = int(24*pix_size)
+    lim = Rshell + pix_size/2
+    nbpix = int(2*lim/pix_size)
+
+
+
 
 
 
@@ -82,6 +97,7 @@ config.write('lim = '+str(lim) +'\n')
 config.write('Rstar = '+str(Rstar) +'\n')
 config.write('Rshell = '+str(Rshell) +'\n')
 config.write('starname = '+'"'+str(starname)+ '"' +'\n')
+config.write('boolShell = '+'"'+str(boolShell)+ '"' +'\n')
 config.close()
 
 
@@ -89,6 +105,7 @@ from functions import *
 
 inputfile = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')[0]
 inputfile_err = glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
+
 input_data, core_params = read_fits(inputfile, Rstar)
 nbpix, pix_size, lim, Rstar = core_params
 
@@ -104,9 +121,10 @@ pix_arr = np.arange(tot_pix)
 x0 = [300*np.pi/180, 0, vsys0, 0]
 
 #The error map
-err,_ = read_fits(inputfile_err, Rstar)
-err = np.ravel(err) + 1E-11
+# err,_ = read_fits(inputfile_err, Rstar)
+# err = np.ravel(err) + 1E-11
 
+err = error_map(inputfile_err)
 
 
 #copy the input data
@@ -135,17 +153,21 @@ data_1d = np.ravel(vel_map_1d)
 
 res_lsq = least_squares(model, x0, args=(pix_arr, data_1d))
 
-print('least squared reulst = ', res_lsq.x)
+print('least squared result = ', res_lsq.x)
 print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 
 res_vel_map_1d = velocity(pix_arr,res_lsq.x)
-# print(data_1d)
-# print(data_1d - res_vel_map_1d)
-# print(err)
+
+
 chi2 = np.nansum(((data_1d - res_vel_map_1d)**2)/err**2)
 print('chi2 = ', chi2)
+
+print('non-zero elements = '+ str(np.count_nonzero(data_1d)) + '/' + str(len(data_1d)))
 chi2r = chi2/np.count_nonzero(data_1d)
 print('chi2r = ', chi2r)
+
+plot_surface(np.reshape(((data_1d - res_vel_map_1d)**2)/err**2, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = False, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
+
 
 plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
 

@@ -24,28 +24,72 @@ def velocity(pix_arr,params):
     pix_size =  config.pix_size
     Rstar =  config.Rstar
     Rshell =  config.Rshell
+    boolShell = config.boolShell
 
     Y, X = np.unravel_index(pix_arr, (nbpix,nbpix)) #X and Y swapped to speak in cartesian coordinates
     X = X*pix_size -lim +pix_size*0.5
     Y = Y*pix_size -lim +pix_size*0.5
 
     R = (X*X + Y*Y)**0.5
-    # print(X)
-    #
-    mask = R > Rstar
+
+    if boolShell:
+        mask = np.logical_or(R <= Rstar, R > Rshell)
+    else:
+        mask = R > Rstar
+
     # X[mask] = np.nan
     # Y[mask] = np.nan
 
     axis_perp = X*np.cos(axis_radian) + Y*np.sin(axis_radian) #x'
     axis_para =  -X*np.sin(axis_radian) + Y*np.cos(axis_radian)#y'
     vrot = axis_perp*np.abs(vsini)/Rstar# Rshell
-    vtot = vrot + vsys - vexp*(Rshell - R)/Rshell
+    vrot += 1E-32
+
+
+    if boolShell:
+        vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
+    else:
+        vtot = vsys + vrot - vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
+
+
     # h = plt.imshow(np.reshape(R, (nbpix, nbpix)), extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = 'bwr')
     # plt.show()
     # print(stop)
 
     return vtot.ravel()
+
+def error_map(inputfile_err):
+
+    nbpix = config.nbpix
+    lim =  config.lim
+    pix_size =  config.pix_size
+    Rstar =  config.Rstar
+    Rshell =  config.Rshell
+    boolShell = config.boolShell
+
+    err,_ = read_fits(inputfile_err, Rstar)
+
+    Y, X = np.indices(np.shape(err)) #X and Y swapped to speak in cartesian coordinates
+    X = X*pix_size -lim +pix_size*0.5
+    Y = Y*pix_size -lim +pix_size*0.5
+
+    R = (X*X + Y*Y)**0.5
+
+
+    if boolShell:
+        mask = np.logical_or(R <= Rstar, R > Rshell)
+    else:
+        mask = R > Rstar
+
+    err[mask] = 0
+
+    unmask = np.logical_not(mask)
+    unmask = np.logical_and(unmask, err == 0.0)
+    err[unmask] = 1E3 # for empty value from specfit
+
+    err = np.ravel(err) + 1E-11
+    return err
 
 
 
@@ -62,10 +106,10 @@ def log_prior(params):
         return -np.inf
     if axis_radian > 2.5*np.pi:
         return -np.inf
-    # if vexp >100:       #slow wind
-    #     return -np.inf
-    # if vexp <-100:
-    #     return -np.inf
+    if vexp >100:       #slow wind
+        return -np.inf
+    if vexp <-100:
+        return -np.inf
     return 0
 
 # Vraisemblance (log-likelihood)

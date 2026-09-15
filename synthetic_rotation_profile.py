@@ -12,10 +12,11 @@ plt.rcParams['font.size'] = 16
 
 #HARDCODE VARIABLES
 
-nbpix = 15*3 #lim*2 - 1#50 # nbpix
-lim = 22.5 # size of the image in mas
+nbpix = 30 #lim*2 - 1#50 # nbpix
+lim = 51.5 # size of the image in mas
 pix_size =2*(lim)/nbpix
-Rstar = 21
+Rstar = 21 # mas
+Rshell = 50
 
 """
 Some useful functions
@@ -26,7 +27,10 @@ def model_dif(params, pix_arr, data): #x t y
     return data - model
 
 def log_prior_diff(params):
-    axis_radian, vsini, vsys, vexp, alpha = params
+    if len(params) == 5:
+        axis_radian, vsini, vsys, vexp, alpha = params
+    else:
+         axis_radian, vsini, vsys, vexp = params
     if vsini <0:
         return -np.inf
     if vsini >50:
@@ -36,12 +40,15 @@ def log_prior_diff(params):
     if axis_radian > 2*np.pi:
         return -np.inf
 
-
     return 0
 
 # Vraisemblance (log-likelihood)
 def log_likelihood_diff(params, pix_arr, data):
-    axis_radian, vsini, vsys, vexp, alpha = params
+    if len(params) == 5:
+        axis_radian, vsini, vsys, vexp, alpha = params
+    else:
+         axis_radian, vsini, vsys, vexp = params
+    # axis_radian, vsini, vsys, vexp, alpha = params
     sigma = 0.1*np.ones(np.shape(pix_arr))
     model = velocity_dif(pix_arr,params)
     return -0.5 * np.sum(((data - model) / sigma) ** 2 + np.log(2 * np.pi * sigma ** 2))
@@ -54,10 +61,20 @@ def log_posterior_diff(params, pix_arr, data):
     return lp + log_likelihood_diff(params, pix_arr, data)
 
 
+def log_probability_fixed(params, pix_arr, data):
+    alpha = 0
+    params[-1] = alpha
+
+    return log_posterior_diff(params, pix_arr, data)
 
 
 def velocity_dif(pix_arr,params):
-    axis_radian, vsini, vsys, vexp, alpha = params
+    if len(params) == 5:
+        axis_radian, vsini, vsys, vexp, alpha = params
+    else:
+         axis_radian, vsini, vsys, vexp = params
+         alpha = 0
+    # axis_radian, vsini, vsys, vexp, alpha = params
 
     # Y, X = np.unravel_index(pix_arr, (nbpix,nbpix)) #X and Y swapped to speak in cartesian coordinates
     # X = X*pix_size -lim
@@ -70,13 +87,18 @@ def velocity_dif(pix_arr,params):
 
     R = (X*X + Y*Y)**0.5
     #
-    mask = R > Rstar
+
+
+    if boolShell:
+        mask = np.logical_or(R < Rstar, R > Rshell)
+    else:
+        mask = R > Rstar
     # X[mask] = np.nan
     # Y[mask] = np.nan
 
     axis_perp = X*np.cos(axis_radian) + Y*np.sin(axis_radian) #x'
     axis_para =  -X*np.sin(axis_radian) + Y*np.cos(axis_radian)#y'
-    vrot = axis_perp*vsini/Rshell
+    vrot = axis_perp*vsini/Rstar
     azim = np.atan(axis_para/Rstar)
 
 
@@ -93,13 +115,19 @@ def velocity_dif(pix_arr,params):
 
     vrot += 1E-32
     vtot = vrot + vsys - vexp*(Rshell - R)/Rshell #+ vdiff
+    if boolShell:
+        vrot = vsini * (Rstar/np.abs(axis_perp))**0.5
+        vrot = axis_perp*vsini/Rstar
+        vrot += 1E-32
+        vtot = vsys + vrot
     # print(stop)
     vtot[mask] = 0#np.nan
 
     return vtot.ravel()
 
 
-
+boolShell = True
+boolSolid = True
 
 DIR = 'Figures/vel_diff_model/'
 
@@ -115,13 +143,12 @@ core_params = nbpix, pix_size, lim, Rstar
 """
 The model parameters:
 """
-axis = 170 #in degrees
+axis = 45 #in degrees
 axis_radian = axis*np.pi/180
 
-vsini = 0.2 #km/s, should be positive
+vsini = 2 #km/s, should be positive
 vsys = 0#4.9 #km/´s
 vexp = 2 #km/s, positive value for outflows
-Rshell = 30
 # pixel
 alpha = 0
 params = [axis_radian, vsini, vsys, vexp, alpha]
@@ -195,11 +222,20 @@ print('chi2 = ', chi2)
 
 #MCMC fit
 ndim = len(params)
-nwalkers = 50
 initial_guess = x0
+
+if boolSolid:
+    ndim = len(params) -1
+    initial_guess = np.ones(ndim)
+nwalkers = 50
+
 pos = initial_guess + 1e-4 * np.random.randn(nwalkers, ndim)
 
-sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior_diff, args=(pix_arr, data_1d))
+
+if boolSolid:
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability_fixed, args=(pix_arr, data_1d))
+else:
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior_diff, args=(pix_arr, data_1d))
 print("Running MCMC...")
 sampler.run_mcmc(pos, 15000, progress=True)
 #Results
@@ -208,21 +244,61 @@ samples = sampler.get_chain(discard=burn_in, flat=True)
 
 
 params_MCMC = np.mean(samples, axis=0)
-print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3f}, vsys = {params_MCMC[2]:.3f}, vexp = {params_MCMC[3]:.3f}, alpha = {params_MCMC[4]:.3f}")
 
-MCMC_vel_map_1d = velocity_dif(pix_arr,params_MCMC)
-plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'MCMC_fit.png')
+if boolSolid:
+
+    print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3f}, vsys = {params_MCMC[2]:.3f}, vexp = {params_MCMC[3]:.3f}")
+
+    MCMC_vel_map_1d = velocity_dif(pix_arr, np.concatenate((params_MCMC, [0])))
+    plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'MCMC_fit.png')
 
 
-samples[:,0] = samples[:,0]*180/np.pi
+    samples[:,0] = samples[:,0]*180/np.pi
+    if boolShell:
+        samples = samples[:,0:-1]
+        fig = corner.corner(
+            samples,
+            labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$"],
+            quantiles=[0.16, 0.5, 0.84],
+            show_titles=True,
+            title_fmt=".2f"
+        )
+    else:
 
-fig = corner.corner(
-    samples,
-    labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$", r"$\alpha$"],
-    quantiles=[0.16, 0.5, 0.84],
-    show_titles=True,
-    title_fmt=".2f"
-)
+        fig = corner.corner(
+            samples,
+            labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$"],
+            quantiles=[0.16, 0.5, 0.84],
+            show_titles=True,
+            title_fmt=".2f"
+        )
+
+else:
+    print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3f}, vsys = {params_MCMC[2]:.3f}, vexp = {params_MCMC[3]:.3f}, alpha = {params_MCMC[4]:.3f}")
+
+    MCMC_vel_map_1d = velocity_dif(pix_arr,params_MCMC)
+    plot_surface(np.reshape(MCMC_vel_map_1d, (nbpix, nbpix)), params_MCMC[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'MCMC_fit.png')
+
+
+    samples[:,0] = samples[:,0]*180/np.pi
+    if boolShell:
+        samples = np.delete(samples, 3, axis=1)
+        fig = corner.corner(
+            samples,
+            labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$\alpha$"],
+            quantiles=[0.16, 0.5, 0.84],
+            show_titles=True,
+            title_fmt=".2f"
+        )
+    else:
+
+        fig = corner.corner(
+            samples,
+            labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$", r"$\alpha$"],
+            quantiles=[0.16, 0.5, 0.84],
+            show_titles=True,
+            title_fmt=".2f"
+        )
 
 
 plt.savefig(DIR +'Corner.png', bbox_inches = 'tight')

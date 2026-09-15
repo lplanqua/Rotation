@@ -1,6 +1,7 @@
-nbpix = 17
+nbpix = 49
 pix_size = 3.0
-lim = 25.5
+lim = 73.5
 Rstar = 24
-Rshell = 27
+Rshell = 72
 starname = "R_Dor"
+boolShell = "True"
