@@ -168,9 +168,10 @@ def pad_with(vector, pad_width, iaxis, kwargs):
     vector[-pad_width[1]:] = pad_value
 
 def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
-
-
-    axis_radian, vsini, vsys, vexp = params
+    if params is not None:
+        axis_radian, vsini, vsys, vexp = params
+    else:
+        vsys = np.nanmedian(vel_map)
     nbpix, pix_size, lim, Rstar = core_params
     Rshell = config.Rshell
     if filename == None:
@@ -180,7 +181,7 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
     plt.figure(figsize = (12,12))
     # h = plt.contourf(X, Y, Rs)
     if title == None:
-        if params[1] == 0:
+        if params is None:
             plt.title('INPUT')
         else:
             plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $R_{shell}$ = '+ str(np.round(Rshell,1))+' pix')
@@ -202,7 +203,7 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
     ax = plt.gca()
 
     ax.tick_params(direction="in", which = 'both', top = True, right = True)
-    if vsini != 0:
+    if params is not None:
         # print(1.2*Rstar*np.sin(axis_radian), -1.2*Rstar*np.cos(axis_radian), -1.2*Rstar*np.sin(axis_radian), 1.2*Rstar*np.cos(axis_radian))
         ax.annotate("", xytext=(1.1*Rstar*np.sin(axis_radian), -1.1*Rstar*np.cos(axis_radian)), xy=(-1.1*Rstar*np.sin(axis_radian), 1.1*Rstar*np.cos(axis_radian)),
                     arrowprops=dict(arrowstyle="->",facecolor='black', lw = 3))
@@ -217,6 +218,7 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
     # cbar.axvline(y=vsys)
     plt.xlabel(r'$\Delta \alpha$ [mas] (<--E)')
     plt.ylabel(r'$\Delta \delta$ [mas] (N-->)')
+
     if boolSave:
         plt.savefig(filename, bbox_inches = 'tight')
         print('saved as : ',filename)
@@ -224,6 +226,9 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
         plt.show()
     else:
         plt.close()
+    # vel_map[vel_map== np.nan] = 0
+    vel_map = np.nan_to_num(vel_map)
+    print(vel_map)
     return True
 
 

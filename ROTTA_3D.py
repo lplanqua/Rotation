@@ -2,7 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import rotate
 from scipy.spatial.transform import Rotation
+import matplotlib as mpl
+import sys
 
+
+plt.rcParams['font.size'] = 16
 
 def rotation_matrix(axis, theta):
     """
@@ -20,12 +24,23 @@ def rotation_matrix(axis, theta):
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
 
-ax = plt.figure().add_subplot(projection='3d')
+
+args = sys.argv
+PA = 45
+incl = 0
+
+if (len(args) > 1):
+    if "-i" in args:
+        incl = float(args[args.index("-i") + 1 ])
+
+    if "-pa" in args:
+        PA = float(args[args.index("-pa") + 1 ])
+
 
 
 # Make the grid
 lim = 3
-nbpoints = 30
+nbpoints = 50
 x, y, z = np.meshgrid(np.linspace(-lim, lim, nbpoints),
                       np.linspace(-lim, lim, nbpoints),
                       np.linspace(-lim, lim, nbpoints))
@@ -39,44 +54,12 @@ mask = np.logical_and(r<Rshell, r>Rstar)
 mask2 = np.logical_or(x>0, (z*z + y*y) > Rstar)
 # mask = np.logical_and(mask, mask2)
 
-PA = -90
-incl = 0
-
-axis1 = (2,0)
-# axis1 = (2,1)
-xprim = rotate(x, PA, axes = axis1, reshape=False)
-yprim = rotate(y, PA, axes = axis1, reshape=False)
-zprim = rotate(z, PA, axes = axis1, reshape=False)
-
-axis2 = (1,0)
-xprimprim = rotate(xprim, incl, axes = axis2, reshape=False)
-yprimprim = rotate(yprim, incl, axes = axis2, reshape=False)
-zprimprim = rotate(zprim, incl, axes = axis2, reshape=False)
-
-rprim = (xprimprim*xprimprim + yprimprim*yprimprim + zprimprim*zprimprim)**0.5
-
-xprim = xprim[mask]
-yprim = yprim[mask]
-zprim = zprim[mask]
-
-xprimprim = xprimprim[mask]
-yprimprim = yprimprim[mask]
-zprimprim = zprimprim[mask]
 
 
-rprim = rprim[mask]
 x = x[mask]
 y = y[mask]
 z = z[mask]
 r = r[mask]
-
-#intrinsic angle according to Euler rotation
-
-# gamma = PA*np.pi/180
-# beta = (90-incl)*np.pi/180
-# mat = np.array([[np.cos(beta), np.sin(beta)*np.sin(gamma), np.sin(beta)*np.cos(gamma)],
-#        [0, np.cos(gamma), -np.sin(gamma)],
-#        [-np.sin(beta), np.cos(beta)*np.sin(beta), np.cos(beta)*np.cos(gamma)]])
 
 
 
@@ -90,11 +73,6 @@ phi = np.arctan2(y,x)
 
 vexp = 0
 vrot = 1
-# phi_v = (np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi),np.cos(theta))
-
-
-# phi_v = rotate(phi_v, PA,  axes = (0,2), reshape=False)
-# phi_v = rotate(phi_v, incl,axes = axis2, reshape=False)
 
 
 # expressed in the intrisici coordinate system: x'',y'', z'' co-rotating with the star
@@ -107,49 +85,73 @@ v = [vx,vy,vz]
 
 
 
-
-
-axis1 = np.array([1, 0, 0])
-theta1 = PA*np.pi/180
-
-rot = rotation_matrix(axis1, theta1)
-print(theta1,axis1)
-
-rot = np.linalg.inv(rot)
-
-vv = np.dot(rot, v)
-
-
-# rot = Rotation.from_rotvec(theta1*axis1)
-# vv = rot.apply(np.transpose(v))
-# vv = np.transpose(vv)
-
-vx = v[0]
-vy = v[1]
-vz = v[2]
-
-
+# inclination
 v = [vx,vy,vz]
-axis2 = [0, np.cos(theta1), np.sin(theta1)]
+#axis2 = [0, np.cos(theta1), np.sin(theta1)]
 axis2 = [0, 1, 0]
-theta2 = incl*np.pi/180
+theta2 = -(90- incl)*np.pi/180
+rot2 = rotation_matrix(axis2, theta2)
+rot2 = np.linalg.inv(rot2)
+v = np.dot(rot2, v)
+x = np.dot(rot2, [x,y,z])
 
-# vv = np.dot(rotation_matrix(axis2, theta2), v)
+[x,y,z] = x
+
+#position angle
+axis1 = np.array([1, 0, 0])
+# axis1 = np.array([1, 0, 0])
+theta1 = -PA*np.pi/180
+rot1 = rotation_matrix(axis1, theta1)
+rot1 = np.linalg.inv(rot1)
+vv = np.dot(rot1, v)
+xx = np.dot(rot1, [x,y,z])
+
+
+
+#rotation vector
+a = [0,0,1.5*lim]
+a = np.dot(rot2, a)
+a = np.dot(rot1, a)
+
+rot_axis = [[0,a[0]],[0,a[1]],[0,a[2]]]
+
+
+[xx,yy,zz] = xx
+
+
 
 vxx = vv[0]
 vyy = vv[1]
 vzz = vv[2]
 
 
+mask2 = np.logical_or(xx>0, (zz*zz + yy*yy) > Rstar)
+
+# xx = xx[mask2]
+# yy = yy[mask2]
+# zz = zz[mask2]
+# vxx = vxx[mask2]
+# vyy = vyy[mask2]
+# vzz = vzz[mask2]
+#
+
+
+
 # Color by vx value (radial velocity)
-c = vx
-c = vxx*np.cos(theta2)+ vzz*np.sin(theta2)
-c = (c.ravel() - c.min()) / np.ptp(c)
+c = vxx
+print(np.shape(vxx), np.shape(r))
+print(np.min(vxx), np.max(vxx) )
+# c = vxx*np.cos(theta2)+ vzz*np.sin(theta2)
+c = (c.ravel() - vx.min()) / np.ptp(vx)
 # c = np.concatenate((c, np.repeat(c, 2)))
 c = plt.cm.bwr_r(c)
 # c = plt.cm.jet(c)
 
-ax.quiver(x, y, z, vxx, vyy, vzz, length=0.2)#, color = c)
+ax = plt.figure(figsize = (15,30)).add_subplot(projection='3d')
+plt.title(r'$i = $'+str(int(incl)) + r'$^\circ$, PA = '+str(int(PA)) + r'$^\circ$' + ' \n' + r'$\vec{v}_{rot}$ = ' + str(vrot) + r'$.\vec{1}_\phi$, $\vec{v}_{exp}$ = '+ str(vexp) + r'$.\vec{1}_r$')
+im = ax.quiver(xx, yy, zz, vxx, vyy, vzz, length=0.2, color = c)
+
+ax.plot(rot_axis[0],rot_axis[1],rot_axis[2], '-', lw = 3, color = 'black')
 
 # ax.quiver(x, y, z, phi_v[0], phi_v[1], phi_v[2], length=0.2, color = c)
 
@@ -163,15 +165,27 @@ Z = Rstar * np.outer(np.ones(np.size(u)), np.cos(v))
 # Plot the surface
 ax.plot_surface(X,Y,Z, color = 'gold')
 
+
+# ax.contourf(xx, yy, zz, zdir='y', offset=-lim, cmap='bwr')
+
 ax.set_xlim([-lim,2*lim])
 ax.set_ylim([-lim,lim])
 ax.set_zlim([-lim,lim])
 
 ax.set_aspect('equal')
-ax.set_zlabel('DEC axis (N->)')
+ax.set_zlabel('DEC axis')
 ax.set_ylabel('RA axis (<-E)')
 ax.set_xlabel('LOS')
-ax.view_init(elev=10, azim=90)
+ax.view_init(elev=0, azim=0)
+
+
+# Hide grid lines
+ax.grid(False)
+
+# ax.set_axis_off()
+plt.savefig('Figures/3D/i='+str(int(incl)) + '_PA='+str(int(PA)) + '_vrot=' + str(vrot) + r'_vexp='+ str(vexp) + '.png', bbox_inches = 'tight')
+
+
 #ax.set_box_aspect((1, 1, 1))
 
 plt.show()

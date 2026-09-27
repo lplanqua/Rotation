@@ -89,6 +89,11 @@ elif starname == 'R_Dor' or starname == 'R_Leo':
     # transition = 'SiO_v=2_8-7'
     input_dir = 'DATA/' + starname+ '/' + date + '/'
 
+output_dir = 'RESULTS/' + starname+ '/'
+if starname == 'R_Dor':
+    output_dir += date
+
+
 
 config = open('config.py', 'w')
 config.write('nbpix = '+ str(nbpix) + '\n')
@@ -101,75 +106,49 @@ config.write('boolShell = '+'"'+str(boolShell)+ '"' +'\n')
 config.close()
 
 
+
+# READING THE INPUT
 from functions import *
 
 inputfile = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')[0]
 inputfile_err = glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
 
 input_data, core_params = read_fits(inputfile, Rstar)
+vel_map_1d = np.copy(input_data)
+
+plot_surface(input_data, None,core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
+
+#PREPARING THE PARAMETERS
+
 nbpix, pix_size, lim, Rstar = core_params
-
-
 print(core_params)
 
 
-tot_pix = nbpix*nbpix
-pix_arr = np.arange(tot_pix)
+pix_arr = np.arange(nbpix*nbpix)
 
-
-#The intial parameters:
-x0 = [300*np.pi/180, 0, vsys0, 0]
 
 #The error map
-# err,_ = read_fits(inputfile_err, Rstar)
-# err = np.ravel(err) + 1E-11
-
 err = error_map(inputfile_err)
-
-
-#copy the input data
-vel_map_1d = np.copy(input_data)
-
-#back to 2d-array for the visualization
-vel_map = np.reshape(vel_map_1d, (nbpix, nbpix))
-# print(vel_map_1d)
-
-
-
-output_dir = 'RESULTS/' + starname+ '/'
-if starname == 'R_Dor':
-    output_dir += date
-
-
-plot_surface(input_data, x0,core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
-# plot_surface(np.reshape(err, (nbpix, nbpix)), x0, core_params,cmap = 'seismic',boolShow= False, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_err.png')
-
 
 #to work directly on th efile
 data_1d = np.ravel(vel_map_1d)
 
+#The intial parameters:
+x0 = [300*np.pi/180, 0, vsys0, 0]
 
 #least_squares
-
-res_lsq = least_squares(model, x0, args=(pix_arr, data_1d))
-
-print('least squared result = ', res_lsq.x)
-print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
-
-res_vel_map_1d = velocity(pix_arr,res_lsq.x)
-
-
-chi2 = np.nansum(((data_1d - res_vel_map_1d)**2)/err**2)
-print('chi2 = ', chi2)
-
-print('non-zero elements = '+ str(np.count_nonzero(data_1d)) + '/' + str(len(data_1d)))
-chi2r = chi2/np.count_nonzero(data_1d)
-print('chi2r = ', chi2r)
-
-plot_surface(np.reshape(((data_1d - res_vel_map_1d)**2)/err**2, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = False, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
-
-
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
+#
+# res_lsq = least_squares(model, x0, args=(pix_arr, data_1d))
+# print('least squared result = ', res_lsq.x)
+# print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
+# res_vel_map_1d = velocity(pix_arr,res_lsq.x)
+# chi2 = np.nansum(((data_1d - res_vel_map_1d)**2)/err**2)
+# print('chi2 = ', chi2)
+# print('non-zero elements = '+ str(np.count_nonzero(data_1d)) + '/' + str(len(data_1d)))
+# chi2r = chi2/np.count_nonzero(data_1d)
+# print('chi2r = ', chi2r)
+# plot_surface(np.reshape(((data_1d - res_vel_map_1d)**2)/err**2, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = False, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
+# plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
 
 
 
@@ -177,8 +156,7 @@ plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params,
 #MCMC fit
 ndim = len(x0)
 nwalkers = 50
-initial_guess = x0
-pos = initial_guess + 1e-4*np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
+pos = x0 + 1e-4*np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
 
 chainname= "Figures/chains/chains.h5"
 backend = emcee.backends.HDFBackend(chainname)

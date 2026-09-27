@@ -60,7 +60,7 @@ if starname == 'R_Dor':
     #
 
 elif starname == 'R_Leo':
-  Rstar = 7
+  Rstar = 27
   center = '[156pix,156pix]'
   if date == '2023-11-04':
     center = '[146pix,156pix]'
@@ -71,8 +71,8 @@ if 'large_scale' in basename:
   regs = 'annulus['+ center+ ',[' +str(Rstar)+'pix,24pix]]'
   #regs='circle['+ center+ ',22pix]'
 
-amprange=[-0.5,5E3]
-centerrange=[0]#,40]#[25,65]   # in pixels!
+amprange=[-0.5E3,5E3]
+centerrange=[40]#,40]#[25,65]   # in pixels!
 fwhmrange = [1,55]
 
 
