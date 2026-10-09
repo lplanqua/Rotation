@@ -18,13 +18,14 @@ Some useful functions for the fit
 
 
 def velocity(pix_arr,params):
-    axis_radian, vsini, vsys, vexp = params
+    axis_radian, vsini, vsys, vexp, alpha = params
     nbpix = config.nbpix
     lim =  config.lim
     pix_size =  config.pix_size
     Rstar =  config.Rstar
     Rshell =  config.Rshell
     boolShell = config.boolShell
+
 
     Y, X = np.unravel_index(pix_arr, (nbpix,nbpix)) #X and Y swapped to speak in cartesian coordinates
     X = X*pix_size -lim +pix_size*0.5
@@ -34,8 +35,10 @@ def velocity(pix_arr,params):
 
     if boolShell:
         mask = np.logical_or(R <= Rstar, R > Rshell)
+
     else:
         mask = R > Rstar
+
 
     # X[mask] = np.nan
     # Y[mask] = np.nan
@@ -45,6 +48,14 @@ def velocity(pix_arr,params):
     vrot = axis_perp*np.abs(vsini)/Rstar# Rshell
     vrot += 1E-32
 
+    azim = np.atan(axis_para/Rstar)
+    if alpha == 0:
+        vrot = vrot
+    elif alpha > 0:
+        vrot = vrot*(1 + alpha*np.sin(azim)**2)/(alpha+1)
+    elif alpha < 0:
+        vrot = vrot*(1 - alpha*(1-np.sin(azim)**2))/(1-alpha)
+
 
     if boolShell:
         vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
@@ -53,7 +64,7 @@ def velocity(pix_arr,params):
     vtot[mask] = 0#np.nan
 
 
-    # h = plt.imshow(np.reshape(R, (nbpix, nbpix)), extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = 'bwr')
+    # h = plt.imshow(np.reshape(vtot, (nbpix, nbpix)), extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = 'bwr')
     # plt.show()
     # print(stop)
 
@@ -99,7 +110,7 @@ def model(params, pix_arr, data): #x t y
     return data - model
 
 def log_prior(params):
-    axis_radian, vsini, vsys, vexp = params
+    axis_radian, vsini, vsys, vexp, alpha = params
     if vsini <0:
         return -np.inf
     if axis_radian< 0.5*np.pi:
@@ -110,11 +121,16 @@ def log_prior(params):
         return -np.inf
     if vexp <-100:
         return -np.inf
+    if alpha >2:       #differential rotation limited
+        return -np.inf
+    if alpha <-2:
+        return -np.inf
+
     return 0
 
 # Vraisemblance (log-likelihood)
 def log_likelihood(params, pix_arr, data, err):
-    axis_radian, vsini, vsys, vexp = params
+    axis_radian, vsini, vsys, vexp, alpha = params
     # sigma = err_scalar*np.ones(np.shape(pix_arr))
     sigma = err
     model = velocity(pix_arr,params)
@@ -126,6 +142,23 @@ def log_posterior(params, pix_arr, data, err):
     if not np.isfinite(lp):
         return -np.inf
     return lp + log_likelihood(params, pix_arr, data, err)
+
+
+
+# Define the log-likelihood function
+def log_posterior_total(params, datasets):
+    total_log_likelihood = 0
+    # print(np.shape(datasets))
+    for dataset in datasets:
+        # print(stop)
+        [pix_arr, data, err] = dataset
+
+
+        total_log_likelihood += log_posterior(params, pix_arr, data, err)
+    return total_log_likelihood
+
+
+
 
 
 
@@ -169,7 +202,7 @@ def pad_with(vector, pad_width, iaxis, kwargs):
 
 def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
     if params is not None:
-        axis_radian, vsini, vsys, vexp = params
+        axis_radian, vsini, vsys, vexp, alpha = params
     else:
         vsys = np.nanmedian(vel_map)
     nbpix, pix_size, lim, Rstar = core_params
@@ -228,12 +261,11 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
         plt.close()
     # vel_map[vel_map== np.nan] = 0
     vel_map = np.nan_to_num(vel_map)
-    print(vel_map)
     return True
 
 
 def write_to_fits(vel_map, params, core_params, filename = None):
-    axis_radian, vsini, vsys, vexp = params
+    axis_radian, vsini, vsys, vexp, alpha = params
     nbpix, pix_size, lim, Rstar = core_params
     if filename == None:
         filename = 'Figures/' + 'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
@@ -278,6 +310,7 @@ def read_fits(filename, Rstar):
     lim = nbpix*pix_size/2
     # Rstar = 21#22.6
     core_params = nbpix, pix_size, lim, Rstar
+    print(core_params)
 
     return data, core_params
 

@@ -11,7 +11,7 @@ import emcee, corner
 plt.rcParams['font.size'] = 16
 
 starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
-date = '2023-10-09'
+dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04']
 
 
 args = sys.argv
@@ -31,8 +31,6 @@ if (len(args) > 1):
     if "-line" in args:
         transition = args[args.index("-line") + 1 ]
         transition += suffix
-
-
 
 
 
@@ -78,23 +76,6 @@ if boolShell:
 
 
 
-
-
-#reading an actual file
-if starname == 'Betelgeuse':
-    transition = '28SiOv2'
-    transition = '28SiOv1' # 29SiOv0 28SiOv1  28SiOv2 12CO
-    input_dir = 'DATA/' + starname+ '/'
-elif starname == 'R_Dor' or starname == 'R_Leo':
-    # transition = 'SiO_v=2_8-7'
-    input_dir = 'DATA/' + starname+ '/' + date + '/'
-
-output_dir = 'RESULTS/' + starname+ '/'
-if starname == 'R_Dor':
-    output_dir += date
-
-
-
 config = open('config.py', 'w')
 config.write('nbpix = '+ str(nbpix) + '\n')
 config.write('pix_size = '+str(pix_size) +'\n')
@@ -106,53 +87,55 @@ config.write('boolShell = '+'"'+str(boolShell)+ '"' +'\n')
 config.close()
 
 
-
-# READING THE INPUT
 from functions import *
+datasets = []
 
-inputfile = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')[0]
-inputfile_err = glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
+for date in dates:
 
-input_data, core_params = read_fits(inputfile, Rstar)
-vel_map_1d = np.copy(input_data)
+    #reading an actual file
+    if starname == 'Betelgeuse':
+        transition = '28SiOv2'
+        transition = '28SiOv1' # 29SiOv0 28SiOv1  28SiOv2 12CO
+        input_dir = 'DATA/' + starname+ '/'
+    elif starname == 'R_Dor' or starname == 'R_Leo':
+        # transition = 'SiO_v=2_8-7'
+        input_dir = 'DATA/' + starname+ '/' + date + '/'
 
-# plot_surface(input_data, None,core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
+    output_dir = 'RESULTS/' + starname+ '/'
+    if starname == 'R_Dor':
+        output_dir += date
+
+    # READING THE INPUT
 
 
+    inputfiles = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')
+    if len(inputfiles) <1:
+        continue
+    inputfile = inputfiles[0]
+    inputfile_err = glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
 
-#PREPARING THE PARAMETERS
+    input_data, core_params = read_fits(inputfile, Rstar)
+    vel_map_1d = np.copy(input_data)
 
-nbpix, pix_size, lim, Rstar = core_params
-print(core_params)
+    plot_surface(input_data, None,core_params, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
+
+    #PREPARING THE PARAMETERS
+
+    nbpix, pix_size, lim, Rstar = core_params
+
+    pix_arr = np.arange(nbpix*nbpix)
+
+    #The error map
+    err = error_map(inputfile_err)
+
+    #to work directly on the file
+    data_1d = np.ravel(vel_map_1d)
 
 
-pix_arr = np.arange(nbpix*nbpix)
-
-#The error map
-err = error_map(inputfile_err)
-
-# plot_surface(err, None,core_params, cmap = 'seismic',boolShow= True, boolSave = False, filename = 'test')
-
-#to work directly on th efile
-data_1d = np.ravel(vel_map_1d)
+    datasets.append((pix_arr, data_1d, err))
 
 #The intial parameters:
-x0 = [300*np.pi/180, 0, vsys0, 0]
-
-#least_squares
-#
-res_lsq = least_squares(model, x0, args=(pix_arr, data_1d))
-print('least squared result = ', res_lsq.x)
-print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
-res_vel_map_1d = velocity(pix_arr,res_lsq.x)
-chi2 = np.nansum(((data_1d - res_vel_map_1d)**2)/err**2)
-print('chi2 = ', chi2)
-print('non-zero elements = '+ str(np.count_nonzero(data_1d)) + '/' + str(len(data_1d)))
-chi2r = chi2/np.count_nonzero(data_1d)
-print('chi2r = ', chi2r)
-plot_surface(np.reshape(((data_1d - res_vel_map_1d)**2)/err**2, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = False, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, core_params, chi2r = chi2r,cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'least_squares_fit.png')
-
+x0 = [300*np.pi/180, 0, vsys0, 0, 0]
 
 
 
@@ -166,7 +149,10 @@ backend = emcee.backends.HDFBackend(chainname)
 backend.reset(nwalkers, ndim)
 
 
-sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, data_1d, err), backend=backend)
+# sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior, args=(pix_arr, data_1d, err), backend=backend)
+
+
+sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior_total, args=[datasets],  backend=backend)
 
 max_n = 100000
 #
@@ -234,7 +220,7 @@ samples = sampler.get_chain(discard=burnin, flat=True)
 
 
 params_MCMC = np.mean(samples, axis=0)
-print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3f}, vsys = {params_MCMC[2]:.3f}, vexp = {params_MCMC[3]:.3f}")
+print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3f}, vsys = {params_MCMC[2]:.3f}, vexp = {params_MCMC[3]:.3f} , alpha = {params_MCMC[4]:.3f}")
 
 MCMC_vel_map_1d = velocity(pix_arr,params_MCMC)
 
@@ -264,7 +250,7 @@ samples[:,0] = samples[:,0]*180/np.pi
 
 fig = corner.corner(
     samples,
-    labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$"],
+    labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$", r"$\alpha$"],
     quantiles=[0.16, 0.5, 0.84],
     show_titles=True,
     title_fmt=".2f"
