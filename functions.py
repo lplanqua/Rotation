@@ -58,7 +58,10 @@ def velocity(pix_arr,params):
 
 
     if boolShell:
+        maskK = axis_perp > Rstar
+        vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-0.5)
         vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
+
     else:
         vtot = vsys + vrot - vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
