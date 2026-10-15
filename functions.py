@@ -19,12 +19,13 @@ Some useful functions for the fit
 
 def velocity(pix_arr,params):
     axis_radian, vsini, vsys, vexp, alpha = params
-    nbpix = config.nbpix
-    lim =  config.lim
     pix_size =  config.pix_size
     Rstar =  config.Rstar
     Rshell =  config.Rshell
-    boolShell = config.boolShell
+    # boolShell = config.boolShell
+
+    nbpix = int(len(pix_arr)**0.5)
+    lim = nbpix*pix_size/2
 
 
     Y, X = np.unravel_index(pix_arr, (nbpix,nbpix)) #X and Y swapped to speak in cartesian coordinates
@@ -33,11 +34,10 @@ def velocity(pix_arr,params):
 
     R = (X*X + Y*Y)**0.5
 
-    if boolShell:
-        mask = np.logical_or(R <= Rstar, R > Rshell)
-
-    else:
+    if nbpix == int(2*Rstar/pix_size+1):
         mask = R > Rstar
+    else:
+        mask = np.logical_or(R <= Rstar, R > Rshell)
 
 
     # X[mask] = np.nan
@@ -49,21 +49,21 @@ def velocity(pix_arr,params):
     vrot += 1E-32
 
     azim = np.atan(axis_para/Rstar)
-    if alpha == 0:
-        vrot = vrot
-    elif alpha > 0:
-        vrot = vrot*(1 + alpha*np.sin(azim)**2)/(alpha+1)
-    elif alpha < 0:
-        vrot = vrot*(1 - alpha*(1-np.sin(azim)**2))/(1-alpha)
+    # if alpha == 0:
+    #     vrot = vrot
+    # elif alpha > 0:
+    #     vrot = vrot*(1 + alpha*np.sin(azim)**2)/(alpha+1)
+    # elif alpha < 0:
+    #     vrot = vrot*(1 - alpha*(1-np.sin(azim)**2))/(1-alpha)
 
 
-    if boolShell:
-        maskK = axis_perp > Rstar
-        vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-0.5)
-        vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
-
-    else:
+    if nbpix == int(2*Rstar/pix_size+1):
         vtot = vsys + vrot - vexp*(Rshell - R)/Rshell
+
+    else: #boolshell
+        maskK = axis_perp > Rstar
+        vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1+alpha)
+        vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
 
 
@@ -75,14 +75,15 @@ def velocity(pix_arr,params):
 
 def error_map(inputfile_err):
 
-    nbpix = config.nbpix
-    lim =  config.lim
     pix_size =  config.pix_size
     Rstar =  config.Rstar
     Rshell =  config.Rshell
-    boolShell = config.boolShell
 
-    err,_ = read_fits(inputfile_err, Rstar)
+
+    err = read_fits(inputfile_err, Rstar)
+
+    nbpix = np.shape(err)[0]
+    lim = nbpix*pix_size/2
 
     Y, X = np.indices(np.shape(err)) #X and Y swapped to speak in cartesian coordinates
     X = X*pix_size -lim +pix_size*0.5
@@ -90,11 +91,10 @@ def error_map(inputfile_err):
 
     R = (X*X + Y*Y)**0.5
 
-
-    if boolShell:
-        mask = np.logical_or(R <= Rstar, R > Rshell)
-    else:
+    if nbpix == int(2*Rstar/pix_size+1): #Boolshell = False
         mask = R > Rstar
+    else:
+        mask = np.logical_or(R <= Rstar, R > Rshell)
 
     err[mask] = 0
 
@@ -203,13 +203,19 @@ def pad_with(vector, pad_width, iaxis, kwargs):
     vector[:pad_width[0]] = pad_value
     vector[-pad_width[1]:] = pad_value
 
-def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
+def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
     if params is not None:
         axis_radian, vsini, vsys, vexp, alpha = params
     else:
         vsys = np.nanmedian(vel_map)
-    nbpix, pix_size, lim, Rstar = core_params
+    # nbpix, pix_size, lim, Rstar = core_params
     Rshell = config.Rshell
+    Rstar = config.Rstar
+    pix_size = config.pix_size
+    nbpix = np.shape(vel_map)[0]
+    lim = nbpix*pix_size/2
+
+
     if filename == None:
         filename = 'Figures/' +'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
         filename += '.png'
@@ -233,7 +239,7 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
     vcenter =vsys
     if config.starname == 'Betelgeuse':
         vcenter = 0
-    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vcenter))
+    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap)#, norm=colors.CenteredNorm(vcenter = vcenter))
 
     plt.axis('scaled')
     ax = plt.gca()
@@ -267,9 +273,15 @@ def plot_surface(vel_map, params,core_params, cmap = 'jet', chi2r = None, boolSh
     return True
 
 
-def write_to_fits(vel_map, params, core_params, filename = None):
+def write_to_fits(vel_map, params, filename = None):
     axis_radian, vsini, vsys, vexp, alpha = params
-    nbpix, pix_size, lim, Rstar = core_params
+    # nbpix, pix_size, lim, Rstar = core_params
+    Rshell = config.Rshell
+    Rstar = config.Rstar
+    pix_size = config.pix_size
+    nbpix = np.shape(vel_map)[0]
+    lim = nbpix*pix_size/2
+
     if filename == None:
         filename = 'Figures/' + 'axis' + str(int(axis_radian*180/np.pi))+ '_vsini'+"{:.1f}".format(vsini)+'_vexp'+"{:.1f}".format(vexp)+'_vsys'+"{:.1f}".format(vsys)+'_Rshell'+"{:.1f}".format(Rshell)
         filename += '.fits'
@@ -307,14 +319,14 @@ def read_fits(filename, Rstar):
     elif data.ndim == 3:
         data = data[0]
     data = np.nan_to_num(data) # Replace NaN values with 0
-    nbpix = np.shape(data)[0]
-    pix_size = 3
-    #pix_size =2*(lim)/nbpix
-    lim = nbpix*pix_size/2
-    # Rstar = 21#22.6
-    core_params = nbpix, pix_size, lim, Rstar
-    print(core_params)
+    # nbpix = np.shape(data)[0]
+    # pix_size = 3
+    # #pix_size =2*(lim)/nbpix
+    # lim = nbpix*pix_size/2
+    # # Rstar = 21#22.6
+    # core_params = nbpix, pix_size, lim, Rstar
+    # print(core_params)
 
-    return data, core_params
+    return data
 
 
