@@ -239,7 +239,7 @@ def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True, bo
     vcenter =vsys
     if config.starname == 'Betelgeuse':
         vcenter = 0
-    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap)#, norm=colors.CenteredNorm(vcenter = vcenter))
+    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vcenter))
 
     plt.axis('scaled')
     ax = plt.gca()
@@ -271,6 +271,76 @@ def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True, bo
     # vel_map[vel_map== np.nan] = 0
     vel_map = np.nan_to_num(vel_map)
     return True
+
+
+def plot_velocity_surfaces(vel_maps, params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
+    if params is not None:
+        axis_radian, vsini, vsys, vexp, alpha = params
+    else:
+        vsys = 7#mean(np.nanmedian(arr) for arr in vel_maps)
+    vmin = min(np.nanmin(arr) for arr in vel_maps)
+    vmax = max(np.nanmax(arr) for arr in vel_maps)
+    # nbpix, pix_size, lim, Rstar = core_params
+    Rshell = config.Rshell
+    Rstar = config.Rstar
+    pix_size = config.pix_size
+    # plt.figure(figsize = (12,12))
+    ndim = len(vel_maps)
+    fig, axes = plt.subplots(1,ndim, figsize=(8 * ndim, 8))
+
+    for idx, vel_map in enumerate(vel_maps):
+        ax = axes[idx]
+        nbpix = np.shape(vel_map)[0]
+        lim = nbpix*pix_size/2
+
+        # plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $R_{shell}$ = '+ str(np.round(Rshell,1))+' pix')
+
+        ax.set_title(title[idx])
+        # vel_map= np.array(vel_map, dtype=float)
+        Cmap = plt.get_cmap(cmap)
+        Cmap.set_bad(color='gray', alpha=0.25)
+
+        vel_map[vel_map== 0] = np.nan
+        #padding
+        vel_map_pad = np.pad(vel_map, 1, pad_with)
+        vcenter =vsys
+        if config.starname == 'Betelgeuse':
+            vcenter = 0
+        h = ax.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, vmin = vmin, vmax = vmax)#, norm=colors.CenteredNorm(vcenter = vcenter))
+
+        plt.axis('scaled')
+
+
+        ax.tick_params(direction="in", which = 'both', top = True, right = True)
+        if params is not None:
+            # print(1.2*Rstar*np.sin(axis_radian), -1.2*Rstar*np.cos(axis_radian), -1.2*Rstar*np.sin(axis_radian), 1.2*Rstar*np.cos(axis_radian))
+            ax.annotate("", xytext=(1.1*Rstar*np.sin(axis_radian), -1.1*Rstar*np.cos(axis_radian)), xy=(-1.1*Rstar*np.sin(axis_radian), 1.1*Rstar*np.cos(axis_radian)),
+                        arrowprops=dict(arrowstyle="->",facecolor='black', lw = 3))
+            p = draw_self_loop(center=(-1.05*Rstar*np.sin(axis_radian), 1.05*Rstar*np.cos(axis_radian)),radius=2, rota = axis_radian*180/np.pi)
+            # ax.add_collection(p)
+            if chi2r != None:
+                ax.annotate(r"$\chi^2_r = $"+"{:.1f}".format(chi2r[idx]),xy = (0.8,0.05), xycoords = 'axes fraction')
+        ax.minorticks_on()
+        vel_map = np.nan_to_num(vel_map)
+
+    cbar = plt.colorbar(h, label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
+    # cbar.add_lines([vsys])
+    cbar.ax.axhline(y=vsys, c='lime', lw = 5)
+    # cbar.axvline(y=vsys)
+    fig.supxlabel(r'$\Delta \alpha$ [mas] (<--E)', y = 0.07)
+    fig.supylabel(r'$\Delta \delta$ [mas] (N-->)', x = 0.10)
+
+    if boolSave:
+        plt.savefig(filename, bbox_inches = 'tight')
+        print('saved as : ',filename)
+    if boolShow:
+        plt.show()
+    else:
+        plt.close()
+
+    return True
+
+
 
 
 def write_to_fits(vel_map, params, filename = None):

@@ -35,7 +35,7 @@ if (len(args) > 1):
 
 # transition += suffix
 
-transitions = [transition+ suffix]#, transition + suffix2]
+transitions = [transition+ suffix, transition + suffix2]
 
 
 
@@ -89,6 +89,8 @@ config.close()
 
 from functions import *
 datasets = []
+inputs_array = []
+names_array = []
 
 for date in dates:
 
@@ -116,12 +118,14 @@ for date in dates:
         inputfile_err = inputfiles[0].replace('vel_0', 'err_0') #glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
 
         input_data = read_fits(inputfile, Rstar)
+        inputs_array.append(input_data)
+        names_array.append(date +'\n '+ transition.split('.clean.')[0])
+
         vel_map_1d = np.copy(input_data)
 
-        plot_surface(input_data, None, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
+        # plot_surface(input_data, None, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
 
         #PREPARING THE PARAMETERS
-
         nbpix = np.shape(input_data)[0]
         pix_arr = np.arange(nbpix*nbpix)
 
@@ -133,7 +137,7 @@ for date in dates:
 
         datasets.append((pix_arr, data_1d, err))
 
-
+plot_velocity_surfaces(inputs_array, None, cmap = 'seismic',boolShow= True, title = names_array, boolSave = True, filename = output_dir + 'input.png')
 
 #The intial parameters:
 x0 = [300*np.pi/180, 0, vsys0, 0, 0]
@@ -217,8 +221,7 @@ for i in range(1,ndim+1):
 
     axes[i].plot(chain[:, :, i-1], color="k", alpha=0.3)
 
-    # Optional: Draw a vertical line to show where your burn-in cutoff is
-    axes[i].axvline(burnin, color="r", linestyle="--", label="Burn-in Cutoff")
+    axes[i].axvline(burnin, color="r", linestyle="--") #"Burn-in Cutoff"
 
     axes[i].set_ylabel(labels[i])
     axes[i].yaxis.set_label_coords(-0.1, 0.5)
@@ -264,7 +267,7 @@ print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3
 
 
 # loop on all the datasets to compute each chi2r
-
+chi2r_array = []
 for date in dates:
 
     for transition in transitions:
@@ -296,12 +299,14 @@ for date in dates:
         chi2 = np.nansum(((data_1d - MCMC_vel_map_1d)**2)/err**2)
         print('chi2 from MCMC = ', chi2)
         chi2r = chi2/np.count_nonzero(data_1d)
+        chi2r_array.append(chi2r)
         print('chi2r = ', chi2r)
 
 #plot the final results
 MCMC_vel_map = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
-plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = chi2r, boolShow= True, boolSave = True, filename = output_dir + 'result_mcmc.png')
+# plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = chi2r, boolShow= True, boolSave = True, filename = output_dir + 'result_mcmc.png')
 
+plot_velocity_surfaces(inputs_array, params_MCMC, cmap = 'seismic',boolShow= True,chi2r = chi2r_array, title = names_array, boolSave = True, filename = output_dir + 'output.png')
 
 """
 save data and results into a  fits file
