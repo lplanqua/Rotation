@@ -48,13 +48,12 @@ def velocity(pix_arr,params):
     vrot = axis_perp*np.abs(vsini)/Rstar# Rshell
     vrot += 1E-32
 
+
     azim = np.atan(axis_para/Rstar)
-    # if alpha == 0:
-    #     vrot = vrot
-    # elif alpha > 0:
-    #     vrot = vrot*(1 + alpha*np.sin(azim)**2)/(alpha+1)
-    # elif alpha < 0:
-    #     vrot = vrot*(1 - alpha*(1-np.sin(azim)**2))/(1-alpha)
+    azim = np.asin(axis_para/Rshell) # in case i = 90
+
+
+    # vrot = vrot*(1 - alpha*np.sin(azim)**2) #uncomment for differential rotation
 
 
     if nbpix == int(2*Rstar/pix_size+1):
@@ -62,14 +61,10 @@ def velocity(pix_arr,params):
 
     else: #boolshell
         maskK = axis_perp > Rstar
-        vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1+alpha)
+        vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1 -alpha)
         vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
 
-
-    # h = plt.imshow(np.reshape(vtot, (nbpix, nbpix)), extent = [-lim, lim, -lim, lim], origin = 'lower', cmap = 'bwr')
-    # plt.show()
-    # print(stop)
 
     return vtot.ravel()
 
@@ -189,7 +184,7 @@ def draw_self_loop(center, radius, rota=-30):
 
     bottom = [offset*np.cos(rota_rad) + (left[0]+right[0])/2., ycent-offset*np.sin(rota_rad)]
     arrow  = plt.Polygon([left, right, bottom, left])
-    print(left, right, bottom)
+    # print(left, right, bottom)
     p = PatchCollection(
         [ring, arrow],
         edgecolor = 'lime',
@@ -203,7 +198,7 @@ def pad_with(vector, pad_width, iaxis, kwargs):
     vector[:pad_width[0]] = pad_value
     vector[-pad_width[1]:] = pad_value
 
-def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True, boolSave = True, filename = None, title = None):
+def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True,bounds = None,  boolSave = True, filename = None, title = None):
     if params is not None:
         axis_radian, vsini, vsys, vexp, alpha = params
     else:
@@ -239,8 +234,10 @@ def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True, bo
     vcenter =vsys
     if config.starname == 'Betelgeuse':
         vcenter = 0
-    h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, norm=colors.CenteredNorm(vcenter = vcenter))
-
+    if bounds == None:
+        h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap)#, norm=colors.CenteredNorm(vcenter = vcenter))
+    else:
+        h = plt.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, vmin = bounds[0], vmax = bounds[1])
     plt.axis('scaled')
     ax = plt.gca()
 
@@ -278,6 +275,8 @@ def plot_velocity_surfaces(vel_maps, params, cmap = 'jet', chi2r = None, boolSho
         axis_radian, vsini, vsys, vexp, alpha = params
     else:
         vsys = 7#mean(np.nanmedian(arr) for arr in vel_maps)
+    for vel_map in vel_maps:
+        vel_map[vel_map== 0] = np.nan
     vmin = min(np.nanmin(arr) for arr in vel_maps)
     vmax = max(np.nanmax(arr) for arr in vel_maps)
     # nbpix, pix_size, lim, Rstar = core_params
@@ -300,12 +299,10 @@ def plot_velocity_surfaces(vel_maps, params, cmap = 'jet', chi2r = None, boolSho
         Cmap = plt.get_cmap(cmap)
         Cmap.set_bad(color='gray', alpha=0.25)
 
-        vel_map[vel_map== 0] = np.nan
+        # vel_map[vel_map== 0] = np.nan
         #padding
         vel_map_pad = np.pad(vel_map, 1, pad_with)
         vcenter =vsys
-        if config.starname == 'Betelgeuse':
-            vcenter = 0
         h = ax.imshow(vel_map_pad, extent = [-lim- pix_size, +lim+pix_size, -lim-pix_size, lim+pix_size], origin = 'lower', cmap = Cmap, vmin = vmin, vmax = vmax)#, norm=colors.CenteredNorm(vcenter = vcenter))
 
         plt.axis('scaled')

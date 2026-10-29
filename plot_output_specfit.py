@@ -11,7 +11,7 @@ plt.rcParams['font.size'] = 16
 
 args = sys.argv
 
-starname = 'R_Leo' # R_Dor , R_Leo or Betelgeuse
+starname = 'R_Dor' # R_Dor , R_Leo or Betelgeuse
 
 
 if starname == 'R_Leo':
@@ -92,13 +92,13 @@ fwhm_file_err = glob.glob(input_dir + '*'+ transition+'*.fwhm.err*.fits')[0]
 
 
 print(amp_file, amp_file_err, vel_file, vel_file_err, fwhm_file, fwhm_file_err)
-amp_data, core_params = read_fits(amp_file, Rstar)
-vel_data, _ = read_fits(vel_file, Rstar)
-fwhm_data, _ = read_fits(fwhm_file, Rstar)
+amp_data = read_fits(amp_file, Rstar)
+vel_data = read_fits(vel_file, Rstar)
+fwhm_data = read_fits(fwhm_file, Rstar)
 
-amp_err_data, _ = read_fits(amp_file_err, Rstar)
-vel_err_data, _ = read_fits(vel_file_err, Rstar)
-fwhm_err_data, _ = read_fits(fwhm_file_err, Rstar)
+amp_err_data = read_fits(amp_file_err, Rstar)
+vel_err_data = read_fits(vel_file_err, Rstar)
+fwhm_err_data = read_fits(fwhm_file_err, Rstar)
 
 
 def create_subplot(ax, data, title, cmap):

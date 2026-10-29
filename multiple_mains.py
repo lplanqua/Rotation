@@ -12,8 +12,8 @@ plt.rcParams['font.size'] = 16
 plt.rcParams["font.family"] = "serif"
 
 starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
-dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04']
-
+dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04', '2023-11-04']
+transition = ['SiO_v=3_8-7']#, 'H2O_v2_2v2_v1']
 
 args = sys.argv
 
@@ -24,21 +24,26 @@ if (len(args) > 1):
         starname = args[args.index("-i") + 1 ]
 
     if "-date" in args:
-        date = args[args.index("-date") + 1 ]
+        dates = args[args.index("-date") + 1 ]
+        dates = [dates]
     if "-line" in args:
         transition = args[args.index("-line") + 1 ]
+        transition = [transition]
+
     if "-shell" in args:
         suffix2 = '.clean.large_scale'
-
+        transitions = [item + suffix2 for item in transition] + [item + suffix for item in transition]
+    elif "-shellonly" in args:
+        suffix2 = '.clean.large_scale'
+        transitions  = [item + suffix2 for item in transition]
+    else:
+        transitions = [item + suffix for item in transition]
 
 
 
 # transition += suffix
 
-transitions = [transition+ suffix, transition + suffix2]
-
-
-
+print(transitions)
 
 
 #HARDCODE VARIABLES
@@ -68,7 +73,7 @@ elif starname == 'R_Leo':
     pix_size =2*(lim)/nbpix
     print(pix_size)
     Rstar = 21#22.6
-    Rshell = 30
+    Rshell = int(24*pix_size)#30
     vsys0 = -0.5
 
 # if boolShell:
@@ -91,11 +96,13 @@ from functions import *
 datasets = []
 inputs_array = []
 names_array = []
+inputfiles_array = []
 
 for date in dates:
+    # print(date)
 
     for transition in transitions:
-
+        # print(transition)
         #reading an actual file
         if starname == 'Betelgeuse':
             transition = '28SiOv2'
@@ -115,6 +122,7 @@ for date in dates:
         if len(inputfiles) <1:
             continue
         inputfile = inputfiles[0]
+        inputfiles_array.append(inputfile)
         inputfile_err = inputfiles[0].replace('vel_0', 'err_0') #glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
 
         input_data = read_fits(inputfile, Rstar)
@@ -268,16 +276,19 @@ print(f"Estimation MCMC : Phi = {params_MCMC[0]:.3f}, vsini = {params_MCMC[1]:.3
 
 # loop on all the datasets to compute each chi2r
 chi2r_array = []
-for date in dates:
+# for date in dates:
+#
+#     for transition in transitions:
 
-    for transition in transitions:
-
+for inputfile in inputfiles_array:
         # READING THE INPUT
-        inputfiles = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')
-        if len(inputfiles) <1:
-            continue
-        inputfile = inputfiles[0]
-        inputfile_err = inputfiles[0].replace('vel_0', 'err_0') #glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
+        # inputfiles = glob.glob(input_dir + '*'+ transition+ '*center.vel*.fits')
+        # print(inputfiles)
+        # if len(inputfiles) <1:
+        #     continue
+        # inputfile = inputfiles[0]
+
+        inputfile_err = inputfile.replace('vel_0', 'err_0') #glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
 
         input_data = read_fits(inputfile, Rstar)
         vel_map_1d = np.copy(input_data)
@@ -302,9 +313,19 @@ for date in dates:
         chi2r_array.append(chi2r)
         print('chi2r = ', chi2r)
 
-#plot the final results
-MCMC_vel_map = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
-# plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = chi2r, boolShow= True, boolSave = True, filename = output_dir + 'result_mcmc.png')
+        #plot the final results
+        MCMC_vel_map = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
+
+        if 'large_scale' in inputfile:
+            MCMC_vel_map_2 = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
+            chi2r2 = chi2r
+
+vmin = min(np.nanmin(arr) for arr in inputs_array)
+vmax = max(np.nanmax(arr) for arr in inputs_array)
+
+plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax], filename = output_dir + 'result_mcmc.png')
+
+plot_surface(MCMC_vel_map_2, params_MCMC, cmap = 'seismic',chi2r = chi2r2, boolShow= True, boolSave = True, bounds = [vmin, vmax],filename = output_dir + 'result_mcmc_2.png')
 
 plot_velocity_surfaces(inputs_array, params_MCMC, cmap = 'seismic',boolShow= True,chi2r = chi2r_array, title = names_array, boolSave = True, filename = output_dir + 'output.png')
 
@@ -322,6 +343,7 @@ Corner plot
 
 
 samples[:,0] = samples[:,0]*180/np.pi
+params_MCMC[0] *=(180/np.pi)%360
 
 figure = corner.corner(
     samples,
@@ -333,11 +355,9 @@ figure = corner.corner(
 )
 
 axes = np.array(figure.axes).reshape((ndim, ndim))
-print(np.shape(axes))
 
 # Loop over the histograms
 for yi in range(ndim): # Loop over the diagonal
-    print(yi)
     axes[yi, yi].axvline(params_MCMC[yi], color="r")
 
     for xi in range(yi):
