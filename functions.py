@@ -14,7 +14,8 @@ import config
 """
 Some useful functions for the fit
 """
-
+BoolDiff = False
+BoolKepler = True
 
 
 def velocity(pix_arr,params):
@@ -49,19 +50,20 @@ def velocity(pix_arr,params):
     vrot += 1E-32
 
 
-    azim = np.atan(axis_para/Rstar)
-    azim = np.asin(axis_para/Rshell) # in case i = 90
 
-
-    # vrot = vrot*(1 - alpha*np.sin(azim)**2) #uncomment for differential rotation
+    if BoolDiff:
+        azim = np.atan(axis_para/Rstar)
+        azim = np.asin(axis_para/Rshell) # in case i = 90
+        vrot = vrot*(1 - alpha*np.sin(azim)**2) #uncomment for differential rotation
 
 
     if nbpix == int(2*Rstar/pix_size+1):
-        vtot = vsys + vrot - vexp*(Rshell - R)/Rshell
+        vtot = vsys + vrot - vexp*(Rstar - R)/(Rstar)
 
     else: #boolshell
-        maskK = axis_perp > Rstar
-        vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1 -alpha)
+        if BoolKepler:
+            maskK = axis_perp > Rstar
+            vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1 -alpha)
         vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
 
@@ -119,9 +121,9 @@ def log_prior(params):
         return -np.inf
     if vexp <-100:
         return -np.inf
-    if alpha >2:       #differential rotation limited
+    if alpha >5:       #differential rotation limited
         return -np.inf
-    if alpha <-2:
+    if alpha <-5:
         return -np.inf
 
     return 0
@@ -143,7 +145,7 @@ def log_posterior(params, pix_arr, data, err):
 
 
 
-# Define the log-likelihood function
+#  The log-likelihood function
 def log_posterior_total(params, datasets):
     total_log_likelihood = 0
     # print(np.shape(datasets))
@@ -152,7 +154,7 @@ def log_posterior_total(params, datasets):
         [pix_arr, data, err] = dataset
 
 
-        total_log_likelihood += log_posterior(params, pix_arr, data, err)
+        total_log_likelihood += log_posterior(params, pix_arr, data, err)/len(pix_arr)
     return total_log_likelihood
 
 
@@ -198,6 +200,16 @@ def pad_with(vector, pad_width, iaxis, kwargs):
     vector[:pad_width[0]] = pad_value
     vector[-pad_width[1]:] = pad_value
 
+def pad_with_err(vector, pad_width, iaxis, kwargs):
+    pad_value = kwargs.get('padder', 1E3)
+    vector[:pad_width[0]] = pad_value
+    vector[-pad_width[1]:] = pad_value
+
+def pad_with_zeros(vector, pad_width, iaxis, kwargs):
+    pad_value = kwargs.get('padder', 0)
+    vector[:pad_width[0]] = pad_value
+    vector[-pad_width[1]:] = pad_value
+
 def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True,bounds = None,  boolSave = True, filename = None, title = None):
     if params is not None:
         axis_radian, vsini, vsys, vexp, alpha = params
@@ -221,7 +233,7 @@ def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True,bou
         if params is None:
             plt.title('INPUT')
         else:
-            plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $R_{shell}$ = '+ str(np.round(Rshell,1))+' pix')
+            plt.title(r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $\alpha$ = '+ str(np.round(alpha,2)))
     else:
         plt.title(title)
     # vel_map= np.array(vel_map, dtype=float)

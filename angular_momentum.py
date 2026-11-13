@@ -11,7 +11,7 @@ plt.rcParams['font.size'] = 16
 
 G = 6.6743E-11
 
-vrot = 200 #m/s
+vrot = 1000 #m/s
 M = 1
 M =  M*1.988E30
 
@@ -77,9 +77,9 @@ planets = [
 
 plt.figure(figsize = (10,10))
 ax = plt.gca()
-plt.plot(d, Mplanet)
-plt.plot(55, 50*317, '*', color = 'red', markersize = 10)
-plt.annotate('R Dor',xy = (55, 50*317), color = 'red')
+# plt.plot(d, Mplanet)
+plt.plot(55*365, 50*317, '*', color = 'red', markersize = 10)
+plt.annotate('R Dor',xy = (55*365, 50*317), color = 'red')
 ax.tick_params(direction="in", which = 'both', top = True, right = True)
 plt.plot(orbital_period_days, mass_earth, 'd', color = 'darkgreen')
 for i, planet in enumerate(planets):

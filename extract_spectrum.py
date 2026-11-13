@@ -171,13 +171,13 @@ toplim *=pix
 
 
 #info on the aperture
-delta_xB = 10
-delta_yB = -10
+delta_xB = 5
+delta_yB = 0
 
-delta_xA = -10
-delta_yA =-10
+delta_xA = -3
+delta_yA =0
 
-delta_xC = 0
+delta_xC = 2
 delta_yC = 0
 
 apertureB = 0.5 # in px

@@ -6,7 +6,7 @@ import glob, os
 starname = 'R_Dor'
 date = '2023-10-12'
 filepath = 'DATA/'+ starname+ '/' + date + '/'
-filenames = glob.glob(filepath+ starname+'*fit*')
+filenames = glob.glob(filepath+ starname+'*CO*fit')
 print(filenames)
 
 for filename in filenames:

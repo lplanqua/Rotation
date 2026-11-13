@@ -12,7 +12,7 @@ plt.rcParams['font.size'] = 16
 
 #HARDCODE VARIABLES
 
-nbpix = 30 #lim*2 - 1#50 # nbpix
+nbpix = 60 #lim*2 - 1#50 # nbpix
 lim = 51.5 # size of the image in mas
 pix_size =2*(lim)/nbpix
 Rstar = 21 # mas
@@ -99,25 +99,22 @@ def velocity_dif(pix_arr,params):
     axis_perp = X*np.cos(axis_radian) + Y*np.sin(axis_radian) #x'
     axis_para =  -X*np.sin(axis_radian) + Y*np.cos(axis_radian)#y'
     vrot = axis_perp*vsini/Rstar
-    azim = np.atan(axis_para/Rstar)
+    sinazim = axis_para/(Rstar*np.sin(inc*np.pi/180) )
 
 
 
     # vrot = vrot*(-1+2*np.heaviside(alpha,1) + alpha*np.sin(azim)**2)
 
-    if alpha == 0:
-        vrot = vrot
-    elif alpha > 0:
-        vrot = vrot*(1+ (alpha-1)*np.sin(azim)**2)/alpha
-    elif alpha < 0:
-        vrot = vrot*(1+(-alpha-1)*(1-np.sin(azim)**2))/(-alpha)
+    vrot = vrot*(1 - alpha*sinazim**2)
     # print(vrot)
 
     vrot += 1E-32
     vtot = vrot + vsys - vexp*(Rshell - R)/Rshell #+ vdiff
     if boolShell:
-        vrot = vsini * (Rstar/np.abs(axis_perp))**0.5
+        # vrot = vsini * (Rstar/np.abs(axis_perp))**0.5
         vrot = axis_perp*vsini/Rstar
+        sinazim = axis_para/(Rshell*np.sin(inc*np.pi/180) )
+        vrot = vrot*(1 - alpha*sinazim**2)
         vrot += 1E-32
         vtot = vsys + vrot
     # print(stop)
@@ -127,7 +124,7 @@ def velocity_dif(pix_arr,params):
 
 
 boolShell = True
-boolSolid = True
+boolSolid = False
 
 DIR = 'Figures/vel_diff_model/'
 
@@ -146,11 +143,12 @@ The model parameters:
 axis = 45 #in degrees
 axis_radian = axis*np.pi/180
 
+inc = 15
 vsini = 2 #km/s, should be positive
 vsys = 0#4.9 #km/´s
 vexp = 2 #km/s, positive value for outflows
 # pixel
-alpha = 0
+alpha = 0.5
 params = [axis_radian, vsini, vsys, vexp, alpha]
 
 
@@ -165,12 +163,12 @@ plot the result
 """
 title = r'$\Phi$ = '+ str(int(axis_radian*180/np.pi))+r'$^\circ$, $|v_{rot}\sin(i)|$ = '+ str(np.round(vsini,1))+ r' km/s'+ '\n'+ r'$v_{exp}$ = '+ str(np.round(vexp,1))+ r' km/s, $v_{sys}$ = '+ str(np.round(vsys,1))+ r' km/s, $\alpha$ = '+ str(np.round(alpha,1))
 filename = DIR + f"alpha = {alpha:.1f}.png" #'input.png'
-plot_surface(vel_map, params[0:4],core_params, boolShow= True, boolSave = True, cmap = 'bwr',title = title, filename = filename)
+plot_surface(vel_map, params, boolShow= True, boolSave = True, cmap = 'bwr',title = title, filename = filename)
 
 """
 export the result into a fits file
 """
-write_to_fits(vel_map, params[0:4],core_params, filename = DIR + 'test.fits')
+write_to_fits(vel_map, params, filename = DIR + 'test.fits')
 
 
 """
@@ -213,7 +211,7 @@ print(res_lsq.x)
 print('PA rotation axis = ', res_lsq.x[0]*180/np.pi)
 
 res_vel_map_1d = velocity_dif(pix_arr,res_lsq.x)
-plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x[0:4], core_params, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'least_squares_fit.png')
+plot_surface(np.reshape(res_vel_map_1d, (nbpix, nbpix)), res_lsq.x, cmap = 'bwr',boolShow= True, boolSave = True, filename = DIR +'least_squares_fit.png')
 err = 0.11
 chi2 = np.sum(((data_1d - res_vel_map_1d)**2)/err**2)
 print('chi2 = ', chi2)
