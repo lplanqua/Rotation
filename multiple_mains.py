@@ -5,7 +5,7 @@ import matplotlib.colors as colors
 import numpy as np
 from scipy.optimize import least_squares
 from astropy.io import fits
-import glob, sys
+import glob, sys, os
 import emcee, corner
 
 plt.rcParams['font.size'] = 16
@@ -13,7 +13,7 @@ plt.rcParams["font.family"] = "serif"
 
 starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04', '2023-11-04']
-transition = ['SiO_v=3_8-7',  'CO_v=1_3-2']#'H2O_v2_2v2_v1',
+transition = ['CO_v=1_3-2','SiO_v=3_8-7', 'H2O_v=0_16-17', 'SO_3_v=0_7-6']#,'H2O_v2_2v2_v1',
 
 args = sys.argv
 
@@ -137,9 +137,9 @@ for date in dates:
             # input_data.resize((int(2*Rshell/pix_size+1),int(2*Rshell/pix_size+1)))
             pad_width = int((2*Rshell/pix_size+1 - np.shape(input_data)[0])/2)
             err = np.pad(np.reshape(err, (np.shape(input_data)[0],np.shape(input_data)[0]) ), pad_width, pad_with_err)
-            plt.figure()
-            plt.imshow(err)
-            plt.show()
+            # plt.figure()
+            # plt.imshow(err)
+            # plt.show()
             err = np.ravel(err)
             input_data = np.pad(input_data, pad_width, pad_with_zeros)
 
@@ -149,9 +149,6 @@ for date in dates:
         #PREPARING THE PARAMETERS
         nbpix = np.shape(vel_map_1d)[0]
         pix_arr = np.arange(nbpix*nbpix)
-
-        #The error map
-
 
         #to work directly on the file
         data_1d = np.ravel(vel_map_1d)
@@ -184,6 +181,10 @@ pos = lows + (highs - lows) * np.random.rand(nwalkers, ndim)
 # pos = x0 + 1e-2*np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
 
 chainname= "Figures/chains/chains.h5"
+
+if os.path.exists(chainname):
+    os.remove(chainname)
+
 backend = emcee.backends.HDFBackend(chainname)
 backend.reset(nwalkers, ndim)
 
@@ -231,7 +232,7 @@ thin = int(0.5 * np.min(tau))
 Plotting the convergence
 """
 
-fig, axes = plt.subplots(ndim+1, figsize=(10, 3 * ndim), sharex=True)
+fig, axes = plt.subplots(ndim+1, figsize=(20, 3 * ndim), sharex=True)
 labels=[r"mean $\hat{\tau}$",r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$", r"$\alpha$"]
 # axes[0].plot(n, n, "--k")
 axes[0].plot(n, y)
@@ -305,14 +306,6 @@ tot_degfree = 0
 for idx, inputfile in enumerate(inputfiles_array):
         # READING THE INPUT
 
-        inputfile_err = inputfile.replace('vel_0', 'err_0') #glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
-
-        # input_data = read_fits(inputfile, Rstar)
-        # vel_map_1d = np.copy(input_data)
-
-        #The error map
-        # err = error_map(inputfile_err)
-
         err = datasets[idx][2]
         input_data = datasets[idx][1]
         pix_arr = datasets[idx][0]
@@ -324,10 +317,6 @@ for idx, inputfile in enumerate(inputfiles_array):
 
         nbpix = int(len(input_data)**0.5)
 
-        # pix_arr = np.arange(nbpix*nbpix)
-
-
-
         #to work directly on the file
         input_data = np.reshape(input_data, (nbpix, nbpix))
 
@@ -337,12 +326,14 @@ for idx, inputfile in enumerate(inputfiles_array):
         chi2 = np.nansum(((data_1d - MCMC_vel_map_1d)**2)/err**2)
         print('chi2 from MCMC = ', chi2)
         degfree = np.count_nonzero(data_1d)
+        print('degree of freedom = ',degfree)
         chi2r = chi2/degfree
         chi2r_array.append(chi2r)
         print('chi2r = ', chi2r)
 
         #plot the final results
-        MCMC_vel_map = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
+        if 'large_scale' not in inputfile:
+            MCMC_vel_map = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
         tot_chi2 += chi2
         tot_degfree += degfree
 
@@ -354,20 +345,20 @@ tot_chi2r = tot_chi2/tot_degfree
 vmin = min(np.nanmin(arr) for arr in inputs_array)
 vmax = max(np.nanmax(arr) for arr in inputs_array)
 
-plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax], filename = output_dir + 'result_mcmc.png')
 
-if "-shell"  in args or "-shellonly" in args:
+if 'MCMC_vel_map' in locals():
+    plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax], filename = output_dir + 'result_mcmc.png')
+    #save data and results into a  fits file
+    filename = output_dir + inputfile[len(input_dir):-5]+ '_results.fits'
+    print('saved as : ', filename)
+    write_to_fits([input_data, MCMC_vel_map,input_data - MCMC_vel_map], params_MCMC, filename = filename)
+
+if 'MCMC_vel_map_2' in locals():
     plot_surface(MCMC_vel_map_2, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax],filename = output_dir + 'result_mcmc_largescale.png')
+
 
 plot_velocity_surfaces(inputs_array, params_MCMC, cmap = 'seismic',boolShow= True,chi2r = chi2r_array, title = names_array, boolSave = True, filename = output_dir + 'output.png')
 
-"""
-save data and results into a  fits file
-"""
-
-filename = output_dir + inputfile[len(input_dir):-5]+ '_results.fits'
-print('saved as : ', filename)
-write_to_fits([input_data, MCMC_vel_map,input_data - MCMC_vel_map], params_MCMC, filename = filename)
 
 """
 Corner plot

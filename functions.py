@@ -14,8 +14,8 @@ import config
 """
 Some useful functions for the fit
 """
-BoolDiff = False
-BoolKepler = True
+BoolDiff = True
+BoolKepler = False
 
 
 def velocity(pix_arr,params):
@@ -261,7 +261,7 @@ def plot_surface(vel_map, params, cmap = 'jet', chi2r = None, boolShow =True,bou
         p = draw_self_loop(center=(-1.05*Rstar*np.sin(axis_radian), 1.05*Rstar*np.cos(axis_radian)),radius=2, rota = axis_radian*180/np.pi)
         # ax.add_collection(p)
         if chi2r != None:
-            ax.annotate(r"$\chi^2_r = $"+"{:.2f}".format(chi2r),xy = (0.8,0.05), xycoords = 'axes fraction')
+            ax.annotate(r"total $\chi^2_r = $"+"{:.2f}".format(chi2r),xy = (0.8,0.05), xycoords = 'axes fraction')
     ax.minorticks_on()
     cbar = plt.colorbar(label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
     # cbar.add_lines([vsys])

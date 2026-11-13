@@ -34,10 +34,7 @@ filepath = 'DATA/'+ starname+ '/' + date + '/'
 basename= filepath + starname + "_"+ transition +  ".clean"
 
 image=basename+".image"
-#basename="R_Dor_29SiO_v=1_8-7.clean"
-#  basename="Betelgeuse.29SiOv0"
-#  basename="Betelgeuse.28SiOv1"
-#  basename="Betelgeuse.12CO"
+
 pest=[10,50,25,"lorentzian"]  # initial fit estimates
 pest = [0.2,36,12,"gaussian"]
 #  regs='circle[[253pix,254pix],15pix]' 
@@ -46,7 +43,7 @@ if '-l' in args:
   basename = basename+ '.large_scale'
 
 if starname == 'R_Dor':
-  Rstar = 8
+  Rstar = 12 #8
 
   if date == '2023-10-12':
     center = '[127pix,146pix]'
@@ -54,6 +51,8 @@ if starname == 'R_Dor':
     center = '[121pix,141pix]'
   elif date == '2023-10-09':
     center = '[116pix,143pix]'
+  elif date == '2023-11-04': #band 9
+    center = '[118pix,147pix]'
   else:
     center = '[116pix,143pix]'
   regs='circle['+ center+ ',' +str(Rstar)+'pix]'
@@ -66,14 +65,14 @@ elif starname == 'R_Leo':
     center = '[146pix,156pix]'
   regs='circle['+ center+ ',' +str(Rstar)+'pix]'
 
-Rshell = 17 #normally = 24
+Rshell = 24#17 #normally = 24
 if 'large_scale' in basename:
   regs = 'annulus['+ center+ ',[' +str(Rstar)+'pix,' +str(Rshell)+'pix]]'
   #regs='circle['+ center+ ',22pix]'
 
-amprange=[-0.5,5] #[-0.5E3,5E3]
+amprange=[-0.05,5] #[-0.5E3,5E3]
 centerrange=[40]#,40]#[25,65]   # in pixels!
-fwhmrange = [5,25]
+fwhmrange = [5,30]
 
 
 #name of the output file
