@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 import matplotlib.colors as colors
+
+from matplotlib.gridspec import GridSpec
 import numpy as np
 from scipy.optimize import least_squares
 from astropy.io import fits
@@ -11,11 +13,11 @@ import config
 
 
 
+
 """
 Some useful functions for the fit
 """
-BoolDiff = True
-BoolKepler = False
+
 
 
 def velocity(pix_arr,params):
@@ -23,8 +25,8 @@ def velocity(pix_arr,params):
     pix_size =  config.pix_size
     Rstar =  config.Rstar
     Rshell =  config.Rshell
-    # boolShell = config.boolShell
-
+    BoolDiff = int(config.BoolDiff)
+    # BoolKepler = not BoolDiff
     nbpix = int(len(pix_arr)**0.5)
     lim = nbpix*pix_size/2
 
@@ -61,7 +63,7 @@ def velocity(pix_arr,params):
         vtot = vsys + vrot - vexp*(Rstar - R)/(Rstar)
 
     else: #boolshell
-        if BoolKepler:
+        if not BoolDiff:
             maskK = axis_perp > Rstar
             vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1 -alpha)
         vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
@@ -297,10 +299,19 @@ def plot_velocity_surfaces(vel_maps, params, cmap = 'jet', chi2r = None, boolSho
     pix_size = config.pix_size
     # plt.figure(figsize = (12,12))
     ndim = len(vel_maps)
-    fig, axes = plt.subplots(1,ndim, figsize=(8 * ndim, 8))
+    nbrow = 4
+    nbcol = ndim//nbrow
+    fig = plt.figure(figsize=(nbcol*5, nbrow*5))#,  hspace=3)
+    widthz = 1*np.ones(nbcol+1)
+    widthz[-1] = 0.05
+    gs = GridSpec(int(np.ceil(ndim/nbcol)), nbcol+1, figure=fig, wspace = 0.1, hspace = 0.3, width_ratios = widthz)
+
 
     for idx, vel_map in enumerate(vel_maps):
-        ax = axes[idx]
+        # print(idx//nbcol, idx%nbcol)
+
+        ax = fig.add_subplot(gs[idx//nbcol, idx%nbcol])
+        # ax = axes[idx//nbcol, idx%nbcol]
         nbpix = np.shape(vel_map)[0]
         lim = nbpix*pix_size/2
 
@@ -330,10 +341,18 @@ def plot_velocity_surfaces(vel_maps, params, cmap = 'jet', chi2r = None, boolSho
             if chi2r != None:
                 ax.annotate(r"$\chi^2_r = $"+"{:.1f}".format(chi2r[idx]),xy = (0.8,0.05), xycoords = 'axes fraction')
         ax.minorticks_on()
+        # if idx//nbcol <np.ceil(ndim/nbcol)-1:# and (idx%nbcol !=0 or :
+        #     ax.set_xticklabels([])
+            #ax.set_yticklabels([])
+
+
         vel_map = np.nan_to_num(vel_map)
 
-    cbar = plt.colorbar(h, label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
+    # cbar = plt.colorbar(h, label = 'RV [km/s]', pad = 0.001,  fraction=0.01,aspect=100)
     # cbar.add_lines([vsys])
+    cax = fig.add_subplot(gs[:, nbcol])
+    cbar = fig.colorbar(h, cax=cax)#, fraction=10, aspect = 50, shrink = 0.01)
+    cbar.set_label('RV [km/s]')
     cbar.ax.axhline(y=vsys, c='lime', lw = 5)
     # cbar.axvline(y=vsys)
     fig.supxlabel(r'$\Delta \alpha$ [mas] (<--E)', y = 0.07)
@@ -398,13 +417,6 @@ def read_fits(filename, Rstar):
     elif data.ndim == 3:
         data = data[0]
     data = np.nan_to_num(data) # Replace NaN values with 0
-    # nbpix = np.shape(data)[0]
-    # pix_size = 3
-    # #pix_size =2*(lim)/nbpix
-    # lim = nbpix*pix_size/2
-    # # Rstar = 21#22.6
-    # core_params = nbpix, pix_size, lim, Rstar
-    # print(core_params)
 
     return data
 

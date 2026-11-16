@@ -15,6 +15,16 @@ starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04', '2023-11-04']
 transition = ['CO_v=1_3-2','SiO_v=3_8-7', 'H2O_v=0_16-17', 'SO_3_v=0_7-6']#,'H2O_v2_2v2_v1',
 
+
+BoolDiff = False
+
+BoolKepler = not BoolDiff
+if BoolDiff:
+    figsuffix = '_DiffRot'
+elif BoolKepler:
+    figsuffix = '_KepRot'
+
+
 args = sys.argv
 
 suffix = '.clean.fit2'
@@ -89,6 +99,7 @@ config.write('pix_size = '+str(pix_size) +'\n')
 config.write('Rstar = '+str(Rstar) +'\n')
 config.write('Rshell = '+str(Rshell) +'\n')
 config.write('starname = '+'"'+str(starname)+ '"' +'\n')
+config.write('BoolDiff = '+'"'+str(int(BoolDiff))+ '"' +'\n')
 config.close()
 
 
@@ -174,8 +185,8 @@ ndim = len(x0)
 nwalkers = 50
 
 
-lows = np.array([1.5*np.pi, 0.0, vsys0-2, -5, -1.0])
-highs = np.array([2.5 * np.pi, 10.0,vsys0+2,5, 1.0])
+lows = np.array([1.5*np.pi, 0.0, vsys0-2, -5, -3.0])
+highs = np.array([2.5 * np.pi, 10.0,vsys0+2,5, 3.0])
 pos = lows + (highs - lows) * np.random.rand(nwalkers, ndim)
 
 # pos = x0 + 1e-2*np.random.randn(nwalkers, ndim) #nitial_guess + 1e-4 *
@@ -205,8 +216,7 @@ for sample in sampler.sample(pos, iterations=max_n, progress=True):
         continue
 
      # Compute the autocorrelation time so far
-     # Using tol=0 means that we'll always get an estimate even if it isn't trustworthy
-    tau = sampler.get_autocorr_time(tol=0)
+    tau = sampler.get_autocorr_time(tol=0)  # Using tol=0 means that we'll always get an estimate even if it isn't trustworthy
     autocorr[index] = np.mean(tau)
     index += 1
 
@@ -257,10 +267,10 @@ for i in range(1,ndim+1):
     axes[i].tick_params(direction="in", which = 'both', top = True, right = True)
 
 axes[-1].set_xlabel("Step number")
-
+plt.xlim([0, n[-1]])
 plt.tight_layout()
 
-plt.savefig(output_dir +'diagnostic.png', bbox_inches = 'tight')
+plt.savefig(output_dir +'_diagnostic' + figsuffix+ '.png', bbox_inches = 'tight')
 plt.show()
 
 
@@ -347,17 +357,17 @@ vmax = max(np.nanmax(arr) for arr in inputs_array)
 
 
 if 'MCMC_vel_map' in locals():
-    plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax], filename = output_dir + 'result_mcmc.png')
+    plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax], filename = output_dir + 'result_mcmc'+figsuffix +'.png')
     #save data and results into a  fits file
     filename = output_dir + inputfile[len(input_dir):-5]+ '_results.fits'
     print('saved as : ', filename)
     write_to_fits([input_data, MCMC_vel_map,input_data - MCMC_vel_map], params_MCMC, filename = filename)
 
 if 'MCMC_vel_map_2' in locals():
-    plot_surface(MCMC_vel_map_2, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax],filename = output_dir + 'result_mcmc_largescale.png')
+    plot_surface(MCMC_vel_map_2, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax],filename = output_dir + 'result_mcmc_largescale'+figsuffix +'.png')
 
 
-plot_velocity_surfaces(inputs_array, params_MCMC, cmap = 'seismic',boolShow= True,chi2r = chi2r_array, title = names_array, boolSave = True, filename = output_dir + 'output.png')
+plot_velocity_surfaces(inputs_array, params_MCMC, cmap = 'seismic',boolShow= True,chi2r = chi2r_array, title = names_array, boolSave = True, filename = output_dir + 'output'+figsuffix +'.png')
 
 
 """
@@ -400,6 +410,6 @@ for yi in range(ndim): # Loop over the diagonal
 figure.subplots_adjust(wspace=0, hspace=0)
 
 
-plt.savefig(output_dir + 'corner.png', bbox_inches = 'tight')
+plt.savefig(output_dir + 'corner'+figsuffix +'.png', bbox_inches = 'tight')
 plt.show()
 
