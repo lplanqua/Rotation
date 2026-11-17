@@ -43,7 +43,7 @@ if '-l' in args:
   basename = basename+ '.large_scale'
 
 if starname == 'R_Dor':
-  Rstar = 12 #8
+  Rstar =  12#8#12 #8
 
   if date == '2023-10-12':
     center = '[127pix,146pix]'
@@ -65,14 +65,14 @@ elif starname == 'R_Leo':
     center = '[146pix,156pix]'
   regs='circle['+ center+ ',' +str(Rstar)+'pix]'
 
-Rshell = 24#17 #normally = 24
+Rshell = 24 #24#17 #normally = 24
 if 'large_scale' in basename:
   regs = 'annulus['+ center+ ',[' +str(Rstar)+'pix,' +str(Rshell)+'pix]]'
   #regs='circle['+ center+ ',22pix]'
 
-amprange=[-0.05,5] #[-0.5E3,5E3]
+amprange=[-0.05,200] #[-0.5E3,5E3]
 centerrange=[40]#,40]#[25,65]   # in pixels!
-fwhmrange = [5,30]
+fwhmrange = [2,35]
 
 
 #name of the output file

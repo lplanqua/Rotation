@@ -13,7 +13,7 @@ plt.rcParams["font.family"] = "serif"
 
 starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04', '2023-11-04']
-transition = ['CO_v=1_3-2','SiO_v=3_8-7', 'H2O_v=0_16-17', 'SO_3_v=0_7-6']#,'H2O_v2_2v2_v1',
+transition = ['CO_v=1_3-2','SiO_v=3_8-7', 'H2O_v=0_16-17', 'H2O_v=0_17-16','SO_3_v=0_7-6',  '29SiO_v=1_8-7', 'SO2_v=0_40-40','H2O_v2_2v2_v1','SO2_v=0_33-32','H2O_v=0_9-8'] #,'SO2_v=0_21-22'
 
 
 BoolDiff = False
@@ -108,6 +108,7 @@ datasets = []
 inputs_array = []
 names_array = []
 inputfiles_array = []
+input_err_array = []
 
 for date in dates:
     # print(date)
@@ -153,6 +154,8 @@ for date in dates:
             # plt.show()
             err = np.ravel(err)
             input_data = np.pad(input_data, pad_width, pad_with_zeros)
+        err_2d = np.copy(np.reshape(err, (np.shape(input_data)[0],np.shape(input_data)[0]) ))
+        err_2d[err_2d >1] = np.nan
 
             # print(np.shape(vel_map_1d))
         # plot_surface(input_data, None, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
@@ -167,6 +170,7 @@ for date in dates:
 
         inputs_array.append(input_data)
         datasets.append((pix_arr, data_1d, err))
+        input_err_array.append(err_2d)
 
 if len(inputs_array) == 1:
     inputs_array = np.concatenate((inputs_array,inputs_array))
@@ -174,6 +178,7 @@ if len(inputs_array) == 1:
 
 
 plot_velocity_surfaces(inputs_array, None, cmap = 'seismic',boolShow= True, title = names_array, boolSave = True, filename = output_dir + 'input.png')
+plot_velocity_surfaces(input_err_array, None, cmap = 'jet',boolShow= True, title = names_array, boolSave = True, filename = output_dir + 'input_err.png')
 
 #The intial parameters:
 x0 = [300*np.pi/180, 0, vsys0, 0, 0]
@@ -202,7 +207,7 @@ backend.reset(nwalkers, ndim)
 
 sampler = emcee.EnsembleSampler(nwalkers, ndim, log_posterior_total, args=[datasets],  backend=backend)
 
-max_n = 100000
+max_n = 10000
 
 
 index = 0
@@ -380,6 +385,7 @@ params_MCMC[0] *=(180/np.pi)%360
 
 figure = corner.corner(
     samples,
+    bins = 50,
     labels=[r"$\Phi$", r"$|v_{rot}\sin(i)|$", r"$v_{sys}$", r"$v_{exp}$", r"$\alpha$"],
     quantiles=[0.16, 0.5, 0.84],
     show_titles=True,

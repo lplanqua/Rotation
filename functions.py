@@ -95,13 +95,13 @@ def error_map(inputfile_err):
     else:
         mask = np.logical_or(R <= Rstar, R > Rshell)
 
-    err[mask] = 0
+    err[mask] = 1E3
 
     unmask = np.logical_not(mask)
     unmask = np.logical_and(unmask, err == 0.0)
     err[unmask] = 1E3 # for empty value from specfit
 
-    err = np.ravel(err) + 1E-11
+    err = np.ravel(err) + 0.1#1E-11
     return err
 
 
@@ -304,7 +304,7 @@ def plot_velocity_surfaces(vel_maps, params, cmap = 'jet', chi2r = None, boolSho
     fig = plt.figure(figsize=(nbcol*5, nbrow*5))#,  hspace=3)
     widthz = 1*np.ones(nbcol+1)
     widthz[-1] = 0.05
-    gs = GridSpec(int(np.ceil(ndim/nbcol)), nbcol+1, figure=fig, wspace = 0.1, hspace = 0.3, width_ratios = widthz)
+    gs = GridSpec(int(np.ceil(ndim/nbcol)), nbcol+1, figure=fig, wspace = 0.1, hspace = 0.4, width_ratios = widthz)
 
 
     for idx, vel_map in enumerate(vel_maps):
