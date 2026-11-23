@@ -65,14 +65,14 @@ elif starname == 'R_Leo':
     center = '[146pix,156pix]'
   regs='circle['+ center+ ',' +str(Rstar)+'pix]'
 
-Rshell = 24 #24#17 #normally = 24
+Rshell = 30 #24#17 #normally = 24
 if 'large_scale' in basename:
   regs = 'annulus['+ center+ ',[' +str(Rstar)+'pix,' +str(Rshell)+'pix]]'
   #regs='circle['+ center+ ',22pix]'
 
-amprange=[-0.05,200] #[-0.5E3,5E3]
+amprange=[0,200] #[-0.5E3,5E3]
 centerrange=[40]#,40]#[25,65]   # in pixels!
-fwhmrange = [2,35]
+fwhmrange = [5,25]
 
 
 #name of the output file

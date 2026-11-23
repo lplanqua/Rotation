@@ -65,7 +65,7 @@ def velocity(pix_arr,params):
     else: #boolshell
         if not BoolDiff:
             maskK = axis_perp > Rstar
-            vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1 -alpha)
+            vrot[maskK] *= (axis_perp[maskK]/Rstar)**(-1 +alpha)
         vtot = vsys + vrot - 0*vexp*(Rshell - R)/Rshell
     vtot[mask] = 0#np.nan
 
@@ -101,7 +101,7 @@ def error_map(inputfile_err):
     unmask = np.logical_and(unmask, err == 0.0)
     err[unmask] = 1E3 # for empty value from specfit
 
-    err = np.ravel(err) + 0.1#1E-11
+    err = (np.ravel(err)**2 + 0.1**2)**0.5 #1E-11 addede a systematic uncertainty of 0.1 km/s
     return err
 
 

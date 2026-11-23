@@ -13,10 +13,10 @@ plt.rcParams["font.family"] = "serif"
 
 starname = 'R_Dor' #or R_Dor or Betelgeuse or R_Leo
 dates = ['2023-10-12','2023-10-09','2023-10-06', '2023-10-04', '2023-11-04']
-transition = ['CO_v=1_3-2','SiO_v=3_8-7', 'H2O_v=0_16-17', 'H2O_v=0_17-16','SO_3_v=0_7-6',  '29SiO_v=1_8-7', 'SO2_v=0_40-40','H2O_v2_2v2_v1','SO2_v=0_33-32','H2O_v=0_9-8'] #,'SO2_v=0_21-22'
+transition = ['CO_v=1_3-2','SiO_v=3_8-7','SiO_v=2_8-7', 'H2O_v=0_16-17', 'H2O_v=0_17-16','SO_3_v=0_7-6',  '29SiO_v=1_8-7', 'SO2_v=0_40-40','SO2_v=0_34-34','H2O_v2_2v2_v1','SO2_v=0_33-32','H2O_v=0_9-8'] #,'SO2_v=0_21-22'
 
 
-BoolDiff = False
+BoolDiff = True
 
 BoolKepler = not BoolDiff
 if BoolDiff:
@@ -73,7 +73,7 @@ elif starname == 'R_Dor':
     pix_size =2*(lim)/nbpix
     print(pix_size)
     Rstar = 24#21#22.6
-    Rshell = int(24*pix_size) #27
+    Rshell = int(44*pix_size) #27
     vsys0 = 6 #5.5
 
 
@@ -109,6 +109,7 @@ inputs_array = []
 names_array = []
 inputfiles_array = []
 input_err_array = []
+input_disp_array = []
 
 for date in dates:
     # print(date)
@@ -138,9 +139,12 @@ for date in dates:
         inputfile = inputfiles[0]
         inputfiles_array.append(inputfile)
         inputfile_err = inputfiles[0].replace('vel_0', 'err_0') #glob.glob(input_dir + '*'+ transition+'*center.err*.fits')[0]
+        inputfile_disp = inputfiles[0].replace('center.vel_0', 'fwhm_0')
 
         input_data = read_fits(inputfile, Rstar)
         err = error_map(inputfile_err)
+        disp = error_map(inputfile_disp)
+        disp = np.reshape(disp, (np.shape(input_data)[0],np.shape(input_data)[0]) )
 
         names_array.append(date +'\n '+ transition.split('.clean.')[0])
 
@@ -149,13 +153,18 @@ for date in dates:
             # input_data.resize((int(2*Rshell/pix_size+1),int(2*Rshell/pix_size+1)))
             pad_width = int((2*Rshell/pix_size+1 - np.shape(input_data)[0])/2)
             err = np.pad(np.reshape(err, (np.shape(input_data)[0],np.shape(input_data)[0]) ), pad_width, pad_with_err)
+            disp = np.pad(disp, pad_width, pad_with_err)
             # plt.figure()
             # plt.imshow(err)
             # plt.show()
             err = np.ravel(err)
             input_data = np.pad(input_data, pad_width, pad_with_zeros)
         err_2d = np.copy(np.reshape(err, (np.shape(input_data)[0],np.shape(input_data)[0]) ))
+
+
         err_2d[err_2d >1] = np.nan
+        disp[disp >500] = np.nan
+
 
             # print(np.shape(vel_map_1d))
         # plot_surface(input_data, None, cmap = 'seismic',boolShow= True, boolSave = True, filename = output_dir + inputfile[len(input_dir):-5]+'_input.png')
@@ -171,6 +180,7 @@ for date in dates:
         inputs_array.append(input_data)
         datasets.append((pix_arr, data_1d, err))
         input_err_array.append(err_2d)
+        input_disp_array.append(disp)
 
 if len(inputs_array) == 1:
     inputs_array = np.concatenate((inputs_array,inputs_array))
@@ -179,6 +189,7 @@ if len(inputs_array) == 1:
 
 plot_velocity_surfaces(inputs_array, None, cmap = 'seismic',boolShow= True, title = names_array, boolSave = True, filename = output_dir + 'input.png')
 plot_velocity_surfaces(input_err_array, None, cmap = 'jet',boolShow= True, title = names_array, boolSave = True, filename = output_dir + 'input_err.png')
+plot_velocity_surfaces(input_disp_array, None, cmap = 'gist_stern',boolShow= True, title = names_array, boolSave = True, filename = output_dir + 'input_disp.png')
 
 #The intial parameters:
 x0 = [300*np.pi/180, 0, vsys0, 0, 0]
@@ -356,6 +367,7 @@ for idx, inputfile in enumerate(inputfiles_array):
             MCMC_vel_map_2 = np.reshape(MCMC_vel_map_1d, (nbpix, nbpix))
 
 
+
 tot_chi2r = tot_chi2/tot_degfree
 vmin = min(np.nanmin(arr) for arr in inputs_array)
 vmax = max(np.nanmax(arr) for arr in inputs_array)
@@ -364,12 +376,16 @@ vmax = max(np.nanmax(arr) for arr in inputs_array)
 if 'MCMC_vel_map' in locals():
     plot_surface(MCMC_vel_map, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax], filename = output_dir + 'result_mcmc'+figsuffix +'.png')
     #save data and results into a  fits file
-    filename = output_dir + inputfile[len(input_dir):-5]+ '_results.fits'
+    filename = output_dir + 'results' + figsuffix+ '.fits'
     print('saved as : ', filename)
-    write_to_fits([input_data, MCMC_vel_map,input_data - MCMC_vel_map], params_MCMC, filename = filename)
+    # write_to_fits([input_data_1, MCMC_vel_map,input_data_1 - MCMC_vel_map], params_MCMC, filename = filename)
+    write_to_fits([ MCMC_vel_map], params_MCMC, filename = filename)
 
 if 'MCMC_vel_map_2' in locals():
     plot_surface(MCMC_vel_map_2, params_MCMC, cmap = 'seismic',chi2r = tot_chi2r, boolShow= True, boolSave = True, bounds = [vmin, vmax],filename = output_dir + 'result_mcmc_largescale'+figsuffix +'.png')
+    filename = output_dir + 'results_large_scale' + figsuffix+ '.fits'
+    print('saved as : ', filename)
+    write_to_fits([MCMC_vel_map_2], params_MCMC, filename = filename)
 
 
 plot_velocity_surfaces(inputs_array, params_MCMC, cmap = 'seismic',boolShow= True,chi2r = chi2r_array, title = names_array, boolSave = True, filename = output_dir + 'output'+figsuffix +'.png')
